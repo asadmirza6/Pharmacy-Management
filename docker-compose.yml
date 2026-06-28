@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: pharmacy_mysql_dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password_123
+      MYSQL_DATABASE: pharmacy_db
+      MYSQL_USER: pharmacy_admin
+      MYSQL_PASSWORD: dev_password_123
+    ports:
+      - "3306:3306"
+    volumes:
+      - pharmacy_mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password_123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pharmacy_mysql_data:
+    driver: local

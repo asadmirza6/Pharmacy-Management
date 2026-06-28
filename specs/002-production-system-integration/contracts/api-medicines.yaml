@@ -1,0 +1,379 @@
+openapi: 3.0.3
+info:
+  title: Pharmacy Management System - Medicine Inventory API
+  description: RESTful API for medicine inventory management with MySQL database integration
+  version: 2.0.0
+  contact:
+    name: Pharmacy System Team
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+
+tags:
+  - name: Medicines
+    description: Medicine inventory CRUD operations
+
+paths:
+  /medicines:
+    get:
+      summary: Get all medicines or search by query
+      tags: [Medicines]
+      parameters:
+        - name: search
+          in: query
+          description: Search term for brand name, generic name, or batch number
+          required: false
+          schema:
+            type: string
+            example: Paracetamol
+      responses:
+        '200':
+          description: Successful response with medicine list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 5
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Medicine'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Add new medicine to inventory
+      tags: [Medicines]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MedicineInput'
+      responses:
+        '201':
+          description: Medicine created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Medicine added successfully
+                  data:
+                    $ref: '#/components/schemas/Medicine'
+        '400':
+          description: Validation error or check constraint violation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /medicines/low-stock:
+    get:
+      summary: Get medicines with stock below reorder threshold
+      tags: [Medicines]
+      responses:
+        '200':
+          description: Successful response with low-stock medicines
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 1
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Medicine'
+
+  /medicines/{id}:
+    get:
+      summary: Get single medicine by ID
+      tags: [Medicines]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Medicine'
+        '404':
+          description: Medicine not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update existing medicine
+      tags: [Medicines]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MedicineUpdate'
+      responses:
+        '200':
+          description: Medicine updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Medicine updated successfully
+                  data:
+                    $ref: '#/components/schemas/Medicine'
+        '404':
+          description: Medicine not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete medicine from inventory
+      tags: [Medicines]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Medicine deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Medicine deleted successfully
+        '400':
+          description: Cannot delete due to foreign key constraint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Medicine not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Medicine:
+      type: object
+      properties:
+        medicine_id:
+          type: integer
+          example: 1
+        brand_name:
+          type: string
+          example: Paracetamol 500mg Tablets
+        generic_name:
+          type: string
+          example: Acetaminophen
+        batch_number:
+          type: string
+          example: B2024-001
+        manufacturing_date:
+          type: string
+          format: date
+          example: '2024-01-15'
+        expiry_date:
+          type: string
+          format: date
+          example: '2027-01-14'
+        cost_price:
+          type: number
+          format: decimal
+          example: 5.00
+        selling_price:
+          type: number
+          format: decimal
+          example: 8.50
+        stock_quantity:
+          type: integer
+          example: 500
+        reorder_threshold:
+          type: integer
+          example: 50
+        supplier_id:
+          type: integer
+          example: 1
+        supplier_name:
+          type: string
+          example: PharmaCorp International Ltd
+        created_at:
+          type: string
+          format: date-time
+          example: '2024-01-15T10:30:00Z'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2024-01-15T10:30:00Z'
+
+    MedicineInput:
+      type: object
+      required:
+        - brand_name
+        - generic_name
+        - batch_number
+        - manufacturing_date
+        - expiry_date
+        - cost_price
+        - selling_price
+        - stock_quantity
+        - reorder_threshold
+        - supplier_id
+        - supplier_name
+      properties:
+        brand_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        generic_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        batch_number:
+          type: string
+          minLength: 1
+          maxLength: 50
+        manufacturing_date:
+          type: string
+          format: date
+        expiry_date:
+          type: string
+          format: date
+        cost_price:
+          type: number
+          format: decimal
+          minimum: 0
+        selling_price:
+          type: number
+          format: decimal
+          minimum: 0
+        stock_quantity:
+          type: integer
+          minimum: 0
+        reorder_threshold:
+          type: integer
+          minimum: 0
+        supplier_id:
+          type: integer
+        supplier_name:
+          type: string
+          maxLength: 200
+
+    MedicineUpdate:
+      type: object
+      properties:
+        brand_name:
+          type: string
+          maxLength: 200
+        generic_name:
+          type: string
+          maxLength: 200
+        batch_number:
+          type: string
+          maxLength: 50
+        manufacturing_date:
+          type: string
+          format: date
+        expiry_date:
+          type: string
+          format: date
+        cost_price:
+          type: number
+          format: decimal
+          minimum: 0
+        selling_price:
+          type: number
+          format: decimal
+          minimum: 0
+        stock_quantity:
+          type: integer
+          minimum: 0
+        reorder_threshold:
+          type: integer
+          minimum: 0
+        supplier_id:
+          type: integer
+        supplier_name:
+          type: string
+          maxLength: 200
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Validation failed
+        message:
+          type: string
+          example: Required fields are missing

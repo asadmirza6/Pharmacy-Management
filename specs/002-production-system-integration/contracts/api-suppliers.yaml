@@ -1,0 +1,388 @@
+openapi: 3.0.3
+info:
+  title: Pharmacy Management System - Supplier Management API
+  description: RESTful API for supplier directory and outstanding balance tracking
+  version: 2.0.0
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+
+tags:
+  - name: Suppliers
+    description: Supplier CRUD and balance management operations
+
+paths:
+  /suppliers:
+    get:
+      summary: Get all suppliers or search by name
+      tags: [Suppliers]
+      parameters:
+        - name: search
+          in: query
+          description: Search term for company name
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response with supplier list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 10
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Supplier'
+
+    post:
+      summary: Create new supplier
+      tags: [Suppliers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierInput'
+      responses:
+        '201':
+          description: Supplier created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Supplier created successfully
+                  data:
+                    $ref: '#/components/schemas/Supplier'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /suppliers/{id}:
+    get:
+      summary: Get supplier by ID
+      tags: [Suppliers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Supplier'
+        '404':
+          description: Supplier not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update supplier information
+      tags: [Suppliers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierUpdate'
+      responses:
+        '200':
+          description: Supplier updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Supplier updated successfully
+                  data:
+                    $ref: '#/components/schemas/Supplier'
+        '404':
+          description: Supplier not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete supplier
+      tags: [Suppliers]
+      description: Deletes supplier if no medicines are associated. Returns error if foreign key constraint prevents deletion.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Supplier deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Supplier deleted successfully
+        '400':
+          description: Cannot delete supplier with associated medicines
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Supplier not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /suppliers/{id}/medicines:
+    get:
+      summary: Get all medicines from a specific supplier
+      tags: [Suppliers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response with supplier's medicines
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 15
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        medicine_id:
+                          type: integer
+                        brand_name:
+                          type: string
+                        generic_name:
+                          type: string
+                        stock_quantity:
+                          type: integer
+                        selling_price:
+                          type: number
+                          format: decimal
+        '404':
+          description: Supplier not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /suppliers/{id}/balance:
+    put:
+      summary: Update supplier outstanding balance
+      tags: [Suppliers]
+      description: Updates supplier balance (positive = owe supplier, negative = supplier owes us)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+                - operation
+              properties:
+                amount:
+                  type: number
+                  format: decimal
+                  minimum: 0
+                  example: 1000.00
+                operation:
+                  type: string
+                  enum: [add, subtract, set]
+                  example: subtract
+                  description: 'add: increase balance, subtract: decrease balance (payment made), set: set to exact value'
+      responses:
+        '200':
+          description: Balance updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Balance updated successfully
+                  data:
+                    $ref: '#/components/schemas/Supplier'
+        '404':
+          description: Supplier not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Supplier:
+      type: object
+      properties:
+        supplier_id:
+          type: integer
+          example: 1
+        company_name:
+          type: string
+          example: PharmaCorp International Ltd
+        contact_representative:
+          type: string
+          nullable: true
+          example: John Smith
+        phone_number:
+          type: string
+          nullable: true
+          example: '555-0100'
+        email_address:
+          type: string
+          nullable: true
+          example: contact@pharmacorp.com
+        physical_address:
+          type: string
+          nullable: true
+          example: '100 Industry Blvd, City, State 10001'
+        outstanding_balance:
+          type: number
+          format: decimal
+          example: 5000.00
+          description: Positive = owe supplier, Negative = supplier owes us
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    SupplierInput:
+      type: object
+      required:
+        - company_name
+      properties:
+        company_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        contact_representative:
+          type: string
+          maxLength: 100
+          nullable: true
+        phone_number:
+          type: string
+          maxLength: 20
+          nullable: true
+        email_address:
+          type: string
+          format: email
+          maxLength: 100
+          nullable: true
+        physical_address:
+          type: string
+          maxLength: 500
+          nullable: true
+        outstanding_balance:
+          type: number
+          format: decimal
+          default: 0.00
+
+    SupplierUpdate:
+      type: object
+      properties:
+        company_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        contact_representative:
+          type: string
+          maxLength: 100
+          nullable: true
+        phone_number:
+          type: string
+          maxLength: 20
+          nullable: true
+        email_address:
+          type: string
+          format: email
+          maxLength: 100
+          nullable: true
+        physical_address:
+          type: string
+          maxLength: 500
+          nullable: true
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+        message:
+          type: string

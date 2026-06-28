@@ -1,0 +1,317 @@
+openapi: 3.0.3
+info:
+  title: Pharmacy Management System - Customer Management API
+  description: RESTful API for customer contact management and purchase history
+  version: 2.0.0
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+
+tags:
+  - name: Customers
+    description: Customer CRUD and purchase history operations
+
+paths:
+  /customers:
+    get:
+      summary: Get all customers or search by query
+      tags: [Customers]
+      parameters:
+        - name: search
+          in: query
+          description: Search term for customer name or phone number
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response with customer list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 25
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Customer'
+
+    post:
+      summary: Create new customer
+      tags: [Customers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerInput'
+      responses:
+        '201':
+          description: Customer created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Customer created successfully
+                  data:
+                    $ref: '#/components/schemas/Customer'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /customers/{id}:
+    get:
+      summary: Get customer by ID
+      tags: [Customers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Customer'
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update customer information
+      tags: [Customers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerUpdate'
+      responses:
+        '200':
+          description: Customer updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Customer updated successfully
+                  data:
+                    $ref: '#/components/schemas/Customer'
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete customer
+      tags: [Customers]
+      description: Deletes customer record. Associated sales transactions are preserved with patient_id set to NULL.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Customer deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Customer deleted successfully
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /customers/{id}/purchases:
+    get:
+      summary: Get customer purchase history
+      tags: [Customers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response with purchase history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 5
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PurchaseHistory'
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Customer:
+      type: object
+      properties:
+        patient_id:
+          type: integer
+          example: 1
+        full_name:
+          type: string
+          example: John Doe
+        contact_number:
+          type: string
+          nullable: true
+          example: '555-0101'
+        email:
+          type: string
+          nullable: true
+          example: john.doe@email.com
+        address:
+          type: string
+          nullable: true
+          example: '123 Main St, City, State 12345'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CustomerInput:
+      type: object
+      required:
+        - full_name
+      properties:
+        full_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        contact_number:
+          type: string
+          maxLength: 20
+          nullable: true
+        email:
+          type: string
+          format: email
+          maxLength: 100
+          nullable: true
+        address:
+          type: string
+          maxLength: 500
+          nullable: true
+
+    CustomerUpdate:
+      type: object
+      properties:
+        full_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        contact_number:
+          type: string
+          maxLength: 20
+          nullable: true
+        email:
+          type: string
+          format: email
+          maxLength: 100
+          nullable: true
+        address:
+          type: string
+          maxLength: 500
+          nullable: true
+
+    PurchaseHistory:
+      type: object
+      properties:
+        invoice_id:
+          type: integer
+          example: 42
+        transaction_timestamp:
+          type: string
+          format: date-time
+          example: '2024-06-20T10:30:00Z'
+        grand_total:
+          type: number
+          format: decimal
+          example: 45.50
+        payment_mode:
+          type: string
+          enum: [Cash, Card, Wallet]
+          example: Card
+        cashier_name:
+          type: string
+          example: Jane Smith
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+        message:
+          type: string

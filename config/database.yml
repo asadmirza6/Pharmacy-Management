@@ -1,0 +1,148 @@
+# Database Configuration
+# This file provides connection pool settings and database configuration
+# for the Pharmacy Management System database layer
+
+database:
+  # Connection settings (override with environment variables)
+  host: ${DB_HOST:-localhost}
+  port: ${DB_PORT:-3306}
+  name: ${DB_NAME:-pharmacy_db}
+  user: ${DB_USER:-pharmacy_admin}
+  password: ${DB_PASSWORD}
+
+  # SSL/TLS configuration
+  ssl:
+    enabled: ${DB_SSL:-false}
+    mode: ${DB_SSL_MODE:-DISABLED}
+    # For production with Azure:
+    # enabled: true
+    # mode: REQUIRED
+    # ca: /path/to/ca-cert.pem  # Optional: Azure provides valid certs
+
+  # Connection pool settings
+  pool:
+    min: ${DB_POOL_MIN:-5}
+    max: ${DB_POOL_MAX:-50}
+    idle_timeout: ${DB_POOL_IDLE_TIMEOUT:-600000}     # 10 minutes (ms)
+    connection_lifetime: ${DB_POOL_CONNECTION_LIFETIME:-1800000}  # 30 minutes (ms)
+    acquire_timeout: 30000                            # 30 seconds (ms)
+    eviction_run_interval: 10000                      # 10 seconds (ms)
+
+  # Character set and collation
+  charset: utf8mb4
+  collation: utf8mb4_unicode_ci
+
+  # Timezone (use UTC for consistency, convert in application layer)
+  timezone: '+00:00'
+
+  # Query logging (development only)
+  logging:
+    enabled: ${NODE_ENV:-development}
+    slow_query_threshold: 5000  # Log queries taking >5 seconds (ms)
+
+  # Additional MySQL options
+  options:
+    # Enable multiple statements for migration scripts
+    multipleStatements: false  # Set to true for migrations
+
+    # Automatically reconnect on connection loss
+    autoReconnect: true
+
+    # Connection timeout
+    connectTimeout: 10000  # 10 seconds (ms)
+
+    # Enable keep-alive
+    enableKeepAlive: true
+    keepAliveInitialDelay: 0
+
+# Migration settings
+migrations:
+  directory: ./database/migrations
+  tableName: schema_versions
+  tracking:
+    column_version: version_number
+    column_description: description
+    column_applied_at: applied_at
+    column_execution_time: execution_time_ms
+    column_applied_by: applied_by
+
+# Backup settings
+backup:
+  enabled: true
+  retention_days: ${BACKUP_RETENTION_DAYS:-30}
+  storage_path: ${BACKUP_STORAGE_PATH:-/var/backups/pharmacy}
+  compression: gzip
+  encryption:
+    enabled: false  # Set to true for production
+    algorithm: aes-256-cbc
+    key_file: /path/to/encryption.key
+
+  # Azure Blob Storage (optional)
+  azure:
+    enabled: false
+    storage_account: ${AZURE_STORAGE_ACCOUNT}
+    container: ${AZURE_STORAGE_CONTAINER:-database-backups}
+    retention_policy: 30  # days
+
+# Environment-specific overrides
+environments:
+  development:
+    pool:
+      min: 2
+      max: 10
+    logging:
+      enabled: true
+
+  staging:
+    pool:
+      min: 5
+      max: 30
+    logging:
+      enabled: true
+      slow_query_threshold: 3000
+
+  production:
+    ssl:
+      enabled: true
+      mode: REQUIRED
+    pool:
+      min: 10
+      max: 100
+    logging:
+      enabled: false  # Use external monitoring tools
+    backup:
+      enabled: true
+      encryption:
+        enabled: true
+
+# Performance monitoring thresholds
+monitoring:
+  connection_usage_alert: 80  # Alert when pool usage exceeds 80%
+  slow_query_alert: 5000      # Alert on queries >5 seconds (ms)
+  connection_errors_alert: 10  # Alert after 10 failed connections
+  disk_usage_alert: 80        # Alert when disk usage >80%
+
+# Schema validation
+validation:
+  # Required tables (checked during startup)
+  required_tables:
+    - schema_versions
+    - medicines
+    - sales_transactions
+    - sales_items
+    - suppliers
+    - users
+
+  # Verify indexes exist
+  required_indexes:
+    - idx_medicine_barcode
+    - idx_medicine_billing
+    - idx_medicine_expiry
+    - idx_transaction_timestamp
+
+  # Verify constraints exist
+  required_constraints:
+    - fk_medicine_supplier
+    - fk_transaction_user
+    - fk_sales_items_invoice
+    - fk_sales_items_medicine

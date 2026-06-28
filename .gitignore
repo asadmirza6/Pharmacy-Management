@@ -1,0 +1,114 @@
+# Environment Variables
+.env
+.env.local
+.env.*.local
+.env.development
+.env.staging
+.env.production
+.env.test
+
+# Database Files
+*.sql.gz
+*.sql.zip
+*.dump
+*.backup
+*.bak
+database/backups/
+database/temp/
+*.log
+
+# Encryption Keys & Certificates
+*.key
+*.pem
+*.crt
+*.cer
+*.pfx
+*.p12
+encryption.key
+
+# Database Connection Files (may contain passwords)
+database.ini
+db.config
+connection.json
+
+# IDE & Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.sublime-project
+*.sublime-workspace
+
+# Node.js (for future backend integration)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn/
+dist/
+build/
+
+# Python (if used for automation scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Temporary Files
+*.tmp
+*.temp
+.cache/
+tmp/
+temp/
+
+# Azure CLI & Cloud Credentials
+.azure/
+azure-credentials.json
+service-principal.json
+
+# Backup Storage
+/var/backups/
+backups/
+*.enc
+
+# MySQL Workbench
+*.mwb.bak
+*.mwb.beforefix
+
+# Test Database Files
+test_*.sql
+*_test.sql
+test_pharmacy_db/
+
+# Documentation Build Output (if using static site generators)
+docs/.build/
+docs/_build/
+site/
+
+# Package Lock Files (commit these in production, but may exclude in dev)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml

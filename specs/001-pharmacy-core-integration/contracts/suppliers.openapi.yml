@@ -1,0 +1,317 @@
+openapi: 3.0.3
+info:
+  title: Supplier Management API
+  description: API endpoints for managing pharmacy supplier directory and ledger balances
+  version: 1.0.0
+  contact:
+    name: Pharmacy System Development Team
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+
+tags:
+  - name: Suppliers
+    description: Supplier directory and account management
+
+paths:
+  /suppliers:
+    get:
+      summary: List all suppliers
+      description: Retrieve all suppliers with their contact information and current ledger balances
+      operationId: getAllSuppliers
+      tags:
+        - Suppliers
+      responses:
+        '200':
+          description: Successful response with supplier list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    description: Number of suppliers returned
+                    example: 3
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Supplier'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      summary: Add new supplier
+      description: Create a new supplier record (future enhancement)
+      operationId: addSupplier
+      tags:
+        - Suppliers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierInput'
+      responses:
+        '201':
+          description: Supplier created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Supplier added successfully
+                  data:
+                    $ref: '#/components/schemas/Supplier'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /suppliers/{id}:
+    get:
+      summary: Get supplier by ID
+      description: Retrieve detailed information for a specific supplier
+      operationId: getSupplierById
+      tags:
+        - Suppliers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique supplier identifier
+          schema:
+            type: string
+            example: SUP-001
+      responses:
+        '200':
+          description: Successful response with supplier details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Supplier'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    put:
+      summary: Update supplier information
+      description: Update supplier contact details or ledger balance (future enhancement)
+      operationId: updateSupplier
+      tags:
+        - Suppliers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique supplier identifier
+          schema:
+            type: string
+            example: SUP-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierUpdate'
+      responses:
+        '200':
+          description: Supplier updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Supplier updated successfully
+                  data:
+                    $ref: '#/components/schemas/Supplier'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  schemas:
+    Supplier:
+      type: object
+      required:
+        - id
+        - name
+        - ledger_balance
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          description: Unique supplier identifier
+          example: SUP-001
+        name:
+          type: string
+          description: Business name of the supplier
+          example: PharmaCorp International Ltd
+        contact_person:
+          type: string
+          description: Primary contact person name
+          example: John Supplier
+          nullable: true
+        phone:
+          type: string
+          description: Contact phone number
+          example: +1-555-0100
+          nullable: true
+        email:
+          type: string
+          format: email
+          description: Contact email address
+          example: orders@pharmacorp.com
+          nullable: true
+        address:
+          type: string
+          description: Physical address
+          example: 123 Medical Drive, Pharmacy City, PC 12345
+          nullable: true
+        ledger_balance:
+          type: number
+          format: double
+          description: Current account balance (positive = owed to supplier, negative = credit)
+          example: 15000.00
+        created_at:
+          type: string
+          format: date-time
+          description: Record creation timestamp
+          example: 2026-01-01T00:00:00.000Z
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: 2026-06-23T08:00:00.000Z
+
+    SupplierInput:
+      type: object
+      required:
+        - id
+        - name
+        - ledger_balance
+      properties:
+        id:
+          type: string
+          description: Unique supplier identifier
+          example: SUP-004
+        name:
+          type: string
+          minLength: 1
+          description: Business name of the supplier
+          example: New Medical Supplies Ltd
+        contact_person:
+          type: string
+          example: Jane Contact
+        phone:
+          type: string
+          example: +1-555-0200
+        email:
+          type: string
+          format: email
+          example: info@newmedical.com
+        address:
+          type: string
+          example: 456 Supply Avenue, Medical Town, MT 67890
+        ledger_balance:
+          type: number
+          format: double
+          default: 0.00
+          example: 0.00
+
+    SupplierUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        contact_person:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+        address:
+          type: string
+        ledger_balance:
+          type: number
+          format: double
+          description: New ledger balance (use caution - affects financial records)
+
+  responses:
+    NotFound:
+      description: Supplier not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: Supplier not found
+              message:
+                type: string
+                example: No supplier found with ID SUP-999
+
+    ValidationError:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: Validation failed
+              message:
+                type: string
+                example: Required fields missing
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: Failed to fetch suppliers
+              message:
+                type: string
+                example: Database connection error

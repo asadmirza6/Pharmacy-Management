@@ -1,0 +1,339 @@
+openapi: 3.0.0
+info:
+  title: Pharmacy Management System - Analytics API
+  description: API endpoints for Dashboard Analytics Integration feature
+  version: 1.0.0
+  contact:
+    name: Pharmacy System Development Team
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+
+tags:
+  - name: Analytics
+    description: Dashboard and analytics endpoints
+
+paths:
+  /analytics/dashboard:
+    get:
+      summary: Get dashboard metrics
+      description: Retrieves real-time metrics for the Dashboard Overview tab including revenue, transactions, alerts, and top sellers
+      operationId: getDashboardMetrics
+      tags:
+        - Analytics
+      responses:
+        '200':
+          description: Dashboard metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/DashboardMetrics'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /analytics/summary:
+    get:
+      summary: Get analytics summary
+      description: Retrieves detailed analytics for the Analytics & Ledger view including transaction history, averages, and sales velocity
+      operationId: getAnalyticsSummary
+      tags:
+        - Analytics
+      responses:
+        '200':
+          description: Analytics summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AnalyticsSummary'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /analytics/top-sellers:
+    get:
+      summary: Get top selling medicines
+      description: Retrieves list of top-selling medicines ranked by quantity sold
+      operationId: getTopSellers
+      tags:
+        - Analytics
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of top sellers to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Top sellers retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    description: Number of items returned
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TopSellerItem'
+        '400':
+          description: Invalid limit parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    DashboardMetrics:
+      type: object
+      description: Real-time metrics for Dashboard Overview
+      required:
+        - revenueToday
+        - transactionsToday
+        - nearExpiryCount
+        - lowStockCount
+        - lowStockAlerts
+        - topSellers
+      properties:
+        revenueToday:
+          type: number
+          format: float
+          description: Total revenue for current session in USD
+          example: 1250.50
+        transactionsToday:
+          type: integer
+          description: Number of completed transactions in current session
+          example: 42
+        nearExpiryCount:
+          type: integer
+          description: Count of medicines expiring within 30 days
+          example: 5
+        lowStockCount:
+          type: integer
+          description: Count of medicines below reorder threshold
+          example: 8
+        lowStockAlerts:
+          type: array
+          description: List of medicines with low stock (max 10)
+          items:
+            $ref: '#/components/schemas/LowStockAlert'
+        topSellers:
+          type: array
+          description: Top 10 medicines by quantity sold
+          items:
+            $ref: '#/components/schemas/TopSellerItem'
+
+    LowStockAlert:
+      type: object
+      description: Medicine with stock below reorder threshold
+      required:
+        - medicineId
+        - medicineName
+        - currentStock
+        - reorderThreshold
+      properties:
+        medicineId:
+          type: string
+          format: uuid
+          description: Unique identifier for the medicine
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        medicineName:
+          type: string
+          description: Brand name of the medicine
+          example: "Aspirin 100mg Tablets"
+        currentStock:
+          type: integer
+          minimum: 0
+          description: Current stock quantity
+          example: 8
+        reorderThreshold:
+          type: integer
+          minimum: 0
+          description: Minimum stock level before reorder
+          example: 10
+
+    TopSellerItem:
+      type: object
+      description: Medicine sales performance data
+      required:
+        - medicineId
+        - medicineName
+        - quantitySold
+        - revenue
+      properties:
+        medicineId:
+          type: string
+          format: uuid
+          description: Unique identifier for the medicine
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        medicineName:
+          type: string
+          description: Brand name of the medicine
+          example: "Paracetamol 500mg Tablets"
+        quantitySold:
+          type: integer
+          minimum: 0
+          description: Total quantity sold in current session
+          example: 150
+        revenue:
+          type: number
+          format: float
+          description: Total revenue from this medicine in USD
+          example: 1275.00
+
+    AnalyticsSummary:
+      type: object
+      description: Detailed analytics for Analytics & Ledger view
+      required:
+        - totalRevenue
+        - totalTransactions
+        - averageTransactionValue
+        - salesVelocity
+        - recentInvoices
+      properties:
+        totalRevenue:
+          type: number
+          format: float
+          description: Total revenue for current session in USD
+          example: 5420.75
+        totalTransactions:
+          type: integer
+          description: Total number of completed transactions
+          example: 87
+        averageTransactionValue:
+          type: number
+          format: float
+          description: Average amount per transaction in USD
+          example: 62.31
+        salesVelocity:
+          $ref: '#/components/schemas/SalesVelocity'
+        recentInvoices:
+          type: array
+          description: Last 50 invoices (newest first)
+          items:
+            $ref: '#/components/schemas/InvoiceSummary'
+
+    SalesVelocity:
+      type: object
+      description: Sales rate metrics
+      required:
+        - transactionsPerHour
+        - hoursSinceStart
+      properties:
+        transactionsPerHour:
+          type: number
+          format: float
+          description: Average transactions per hour
+          example: 10.875
+        hoursSinceStart:
+          type: number
+          format: float
+          description: Hours since session start
+          example: 8.0
+
+    InvoiceSummary:
+      type: object
+      description: Invoice summary for analytics view
+      required:
+        - invoiceId
+        - invoiceNumber
+        - timestamp
+        - customerName
+        - itemCount
+        - totalAmount
+        - paymentMethod
+        - paymentStatus
+      properties:
+        invoiceId:
+          type: string
+          format: uuid
+          description: Unique identifier for the invoice
+          example: "987e6543-e21b-98d3-a456-426614174999"
+        invoiceNumber:
+          type: string
+          description: Human-readable invoice number
+          example: "INV-2026-0042"
+        timestamp:
+          type: string
+          format: date-time
+          description: When the invoice was created
+          example: "2026-06-27T14:30:00Z"
+        customerName:
+          type: string
+          description: Customer name or "Walk-in Customer"
+          example: "John Smith"
+        itemCount:
+          type: integer
+          minimum: 1
+          description: Number of line items in the invoice
+          example: 3
+        totalAmount:
+          type: number
+          format: float
+          description: Total invoice amount in USD
+          example: 45.50
+        paymentMethod:
+          type: string
+          enum: [cash, card, insurance, credit]
+          description: Payment method used
+          example: "cash"
+        paymentStatus:
+          type: string
+          enum: [completed, pending, cancelled]
+          description: Payment status
+          example: "completed"
+
+    Error:
+      type: object
+      description: Error response
+      required:
+        - success
+        - error
+        - message
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error type
+          example: "Internal Server Error"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Failed to compute analytics summary"

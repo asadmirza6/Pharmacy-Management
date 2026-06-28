@@ -1,0 +1,2016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pharmacy Management System - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        .modal-backdrop {
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-md">
+        <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <i class="fas fa-capsules text-3xl text-indigo-600"></i>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">Pharmacy Management System</h1>
+                    <p class="text-sm text-gray-500">Medicine Inventory Dashboard</p>
+                </div>
+            </div>
+            <button id="addBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold shadow-md transition duration-300 flex items-center space-x-2">
+                <i class="fas fa-plus"></i>
+                <span id="addBtnText">Add Medicine</span>
+            </button>
+        </div>
+        <!-- Tabs -->
+        <div class="border-t border-gray-200">
+            <div class="container mx-auto px-4">
+                <div class="flex space-x-1">
+                    <button id="dashboardTab" class="tab-btn px-6 py-3 font-semibold text-indigo-600 border-b-2 border-indigo-600">
+                        <i class="fas fa-chart-line mr-2"></i>Dashboard Overview
+                    </button>
+                    <button id="medicinesTab" class="tab-btn px-6 py-3 font-semibold text-gray-500 hover:text-indigo-600">
+                        <i class="fas fa-pills mr-2"></i>Medicines
+                    </button>
+                    <button id="patientsTab" class="tab-btn px-6 py-3 font-semibold text-gray-500 hover:text-indigo-600">
+                        <i class="fas fa-user-injured mr-2"></i>Patients
+                    </button>
+                    <button id="billingTab" class="tab-btn px-6 py-3 font-semibold text-gray-500 hover:text-indigo-600">
+                        <i class="fas fa-cash-register mr-2"></i>Billing Counter
+                    </button>
+                    <button id="analyticsTab" class="tab-btn px-6 py-3 font-semibold text-gray-500 hover:text-indigo-600">
+                        <i class="fas fa-chart-bar mr-2"></i>Analytics & Ledger
+                    </button>
+                    <button id="suppliersTab" class="tab-btn px-6 py-3 font-semibold text-gray-500 hover:text-indigo-600">
+                        <i class="fas fa-truck mr-2"></i>Suppliers
+                    </button>
+                    <button id="alertsTab" class="tab-btn px-6 py-3 font-semibold text-gray-500 hover:text-indigo-600">
+                        <i class="fas fa-bell mr-2"></i>Alerts <span id="alertBadge" class="ml-1 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Dashboard Overview Section -->
+        <div id="dashboardSection">
+            <!-- Metric Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <!-- Revenue Today Card -->
+                <div class="bg-white rounded-xl shadow-lg p-6 fade-in border-l-4 border-green-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm font-semibold uppercase mb-1">
+                                Revenue Today
+                                <i class="fas fa-info-circle text-xs text-gray-400 ml-1" title="Session-based: Resets on server restart"></i>
+                            </p>
+                            <p id="dashRevenue" class="text-4xl font-bold text-gray-800">$0.00</p>
+                        </div>
+                        <div class="bg-green-100 p-4 rounded-full">
+                            <i class="fas fa-dollar-sign text-3xl text-green-600"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transactions Today Card -->
+                <div class="bg-white rounded-xl shadow-lg p-6 fade-in border-l-4 border-blue-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm font-semibold uppercase mb-1">
+                                Transactions Today
+                                <i class="fas fa-info-circle text-xs text-gray-400 ml-1" title="Session-based: Resets on server restart"></i>
+                            </p>
+                            <p id="dashTransactions" class="text-4xl font-bold text-gray-800">0</p>
+                        </div>
+                        <div class="bg-blue-100 p-4 rounded-full">
+                            <i class="fas fa-receipt text-3xl text-blue-600"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Near Expiry Card -->
+                <div class="bg-white rounded-xl shadow-lg p-6 fade-in border-l-4 border-orange-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm font-semibold uppercase mb-1">Near Expiry</p>
+                            <p id="dashNearExpiry" class="text-4xl font-bold text-gray-800">0</p>
+                            <p class="text-xs text-gray-500 mt-1">Within 30 days</p>
+                        </div>
+                        <div class="bg-orange-100 p-4 rounded-full">
+                            <i class="fas fa-clock text-3xl text-orange-600"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Low Stock Card -->
+                <div class="bg-white rounded-xl shadow-lg p-6 fade-in border-l-4 border-yellow-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm font-semibold uppercase mb-1">Low Stock</p>
+                            <p id="dashLowStock" class="text-4xl font-bold text-gray-800">0</p>
+                        </div>
+                        <div class="bg-yellow-100 p-4 rounded-full">
+                            <i class="fas fa-exclamation-triangle text-3xl text-yellow-600"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Selling Drugs Section -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center space-x-2">
+                    <i class="fas fa-fire text-red-500"></i>
+                    <span>Top Selling Medicines</span>
+                </h2>
+                <div id="topSellersList" class="space-y-3">
+                    <div class="text-center text-gray-400 py-8">
+                        <i class="fas fa-chart-line text-4xl mb-2"></i>
+                        <p>No sales data yet</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Low Stock Alerts Section -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center space-x-2">
+                    <i class="fas fa-bell text-yellow-500"></i>
+                    <span>Low Stock Alerts</span>
+                </h2>
+                <div id="lowStockAlertsList" class="space-y-2">
+                    <div class="text-center text-gray-400 py-8">
+                        <i class="fas fa-check-circle text-4xl mb-2"></i>
+                        <p>All stock levels healthy</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Medicines Section -->
+        <div id="medicinesSection" class="hidden">
+        <!-- Statistics Grid - T038: Enhanced with real-time statistics -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <!-- Total Items Card -->
+            <div class="bg-white rounded-xl shadow-lg p-6 fade-in border-l-4 border-indigo-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-semibold uppercase mb-1">Total Items</p>
+                        <p id="totalItems" class="text-4xl font-bold text-gray-800">0</p>
+                    </div>
+                    <div class="bg-indigo-100 p-4 rounded-full">
+                        <i class="fas fa-pills text-3xl text-indigo-600"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Value Card -->
+            <div class="bg-white rounded-xl shadow-lg p-6 fade-in border-l-4 border-green-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-semibold uppercase mb-1">Inventory Value</p>
+                        <p id="totalValue" class="text-3xl font-bold text-gray-800">$0.00</p>
+                    </div>
+                    <div class="bg-green-100 p-4 rounded-full">
+                        <i class="fas fa-dollar-sign text-3xl text-green-600"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Near Expiry Card -->
+            <div class="bg-white rounded-xl shadow-lg p-6 fade-in border-l-4 border-orange-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-semibold uppercase mb-1">Near Expiry</p>
+                        <p id="nearExpiryCount" class="text-4xl font-bold text-gray-800">0</p>
+                        <p class="text-xs text-gray-500 mt-1">Within 30 days</p>
+                    </div>
+                    <div class="bg-orange-100 p-4 rounded-full">
+                        <i class="fas fa-clock text-3xl text-orange-600"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Low Stock Card -->
+            <div class="bg-white rounded-xl shadow-lg p-6 fade-in border-l-4 border-yellow-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-semibold uppercase mb-1">Low Stock</p>
+                        <p id="lowStockCount" class="text-4xl font-bold text-gray-800">0</p>
+                        <p id="lowStockNames" class="text-xs text-gray-500 mt-1"></p>
+                    </div>
+                    <div class="bg-yellow-100 p-4 rounded-full">
+                        <i class="fas fa-exclamation-triangle text-3xl text-yellow-600"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <div class="flex items-center space-x-3">
+                <i class="fas fa-search text-gray-400 text-xl"></i>
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Search medicines by brand name, generic name, or batch number..."
+                    class="flex-1 outline-none text-gray-700 text-lg"
+                />
+            </div>
+        </div>
+
+        <!-- Medicine Table -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="px-6 py-4 bg-gradient-to-r from-indigo-600 to-indigo-700">
+                <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                    <i class="fas fa-table"></i>
+                    <span>Medicine Inventory</span>
+                </h2>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b-2 border-gray-200">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Brand Name</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Generic Name</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Batch</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Expiry</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Supplier</th>
+                        </tr>
+                    </thead>
+                    <tbody id="medicineTableBody" class="divide-y divide-gray-200">
+                        <!-- Table rows will be dynamically inserted here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="text-center py-12 hidden">
+                <i class="fas fa-spinner fa-spin text-4xl text-indigo-600 mb-4"></i>
+                <p class="text-gray-500">Loading medicines...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="text-center py-12 hidden">
+                <i class="fas fa-inbox text-6xl text-gray-300 mb-4"></i>
+                <p class="text-gray-500 text-lg">No medicines found</p>
+            </div>
+        </div>
+        </div>
+
+        <!-- Patients Section -->
+        <div id="patientsSection" class="hidden">
+            <!-- Search Bar -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-search text-gray-400 text-xl"></i>
+                    <input type="text" id="searchPatients" placeholder="Search patients by name, email, or contact..." class="flex-1 outline-none text-gray-700 text-lg"/>
+                </div>
+            </div>
+
+            <!-- Patients Table -->
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div class="px-6 py-4 bg-gradient-to-r from-indigo-600 to-indigo-700">
+                    <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                        <i class="fas fa-users"></i>
+                        <span>Patient Records</span>
+                    </h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b-2 border-gray-200">
+                            <tr>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Full Name</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Contact</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Address</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patientsTableBody" class="divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+                <div id="patientsLoading" class="text-center py-12 hidden">
+                    <i class="fas fa-spinner fa-spin text-4xl text-indigo-600 mb-4"></i>
+                    <p class="text-gray-500">Loading patients...</p>
+                </div>
+                <div id="patientsEmpty" class="text-center py-12 hidden">
+                    <i class="fas fa-inbox text-6xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 text-lg">No patients found</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- T026: Billing Counter Section -->
+        <div id="billingSection" class="hidden">
+            <!-- Billing Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Left: Medicine Selection -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center space-x-2">
+                        <i class="fas fa-shopping-cart text-indigo-600"></i>
+                        <span>Select Items</span>
+                    </h2>
+
+                    <!-- Medicine Search/Select -->
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Select Medicine</label>
+                            <select id="medicineSelect" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                                <option value="">-- Select a medicine --</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Quantity</label>
+                            <input type="number" id="quantityInput" min="1" value="1" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                        </div>
+
+                        <button id="addToCartBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold transition flex items-center justify-center space-x-2">
+                            <i class="fas fa-plus"></i>
+                            <span>Add to Cart</span>
+                        </button>
+                    </div>
+
+                    <!-- Cart Items -->
+                    <div class="mt-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-3">Cart Items</h3>
+                        <div id="cartItems" class="space-y-2 max-h-64 overflow-y-auto">
+                            <div class="text-center text-gray-400 py-8">
+                                <i class="fas fa-shopping-cart text-4xl mb-2"></i>
+                                <p>Cart is empty</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cart Total -->
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <div class="flex justify-between items-center text-2xl font-bold">
+                            <span class="text-gray-700">Total:</span>
+                            <span id="cartTotal" class="text-indigo-600">$0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Customer Info (Optional) -->
+                    <div class="mt-4 space-y-3">
+                        <input type="text" id="customerName" placeholder="Customer Name (Optional)" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <input type="tel" id="customerPhone" placeholder="Customer Phone (Optional)" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+
+                    <!-- Checkout Button -->
+                    <button id="checkoutBtn" class="w-full mt-4 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold text-lg transition flex items-center justify-center space-x-2">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Process Checkout</span>
+                    </button>
+                </div>
+
+                <!-- Right: Invoice History -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center space-x-2">
+                        <i class="fas fa-receipt text-indigo-600"></i>
+                        <span>Recent Invoices</span>
+                    </h2>
+
+                    <div id="invoiceHistory" class="space-y-3 max-h-[600px] overflow-y-auto">
+                        <div class="text-center text-gray-400 py-8">
+                            <i class="fas fa-file-invoice text-4xl mb-2"></i>
+                            <p>No invoices yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics & Ledger Section -->
+        <div id="analyticsSection" class="hidden">
+            <!-- Summary Metrics Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <!-- Total Revenue Card -->
+                <div class="bg-white rounded-xl shadow-lg p-6 fade-in border-l-4 border-green-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm font-semibold uppercase mb-1">Total Revenue</p>
+                            <p id="analyticsTotalRevenue" class="text-4xl font-bold text-gray-800">$0.00</p>
+                        </div>
+                        <div class="bg-green-100 p-4 rounded-full">
+                            <i class="fas fa-dollar-sign text-3xl text-green-600"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total Transactions Card -->
+                <div class="bg-white rounded-xl shadow-lg p-6 fade-in border-l-4 border-blue-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm font-semibold uppercase mb-1">Total Transactions</p>
+                            <p id="analyticsTotalTransactions" class="text-4xl font-bold text-gray-800">0</p>
+                        </div>
+                        <div class="bg-blue-100 p-4 rounded-full">
+                            <i class="fas fa-receipt text-3xl text-blue-600"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Average Transaction Value Card -->
+                <div class="bg-white rounded-xl shadow-lg p-6 fade-in border-l-4 border-purple-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm font-semibold uppercase mb-1">Avg Transaction</p>
+                            <p id="analyticsAvgTransaction" class="text-4xl font-bold text-gray-800">$0.00</p>
+                        </div>
+                        <div class="bg-purple-100 p-4 rounded-full">
+                            <i class="fas fa-calculator text-3xl text-purple-600"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sales Velocity Card -->
+                <div class="bg-white rounded-xl shadow-lg p-6 fade-in border-l-4 border-indigo-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm font-semibold uppercase mb-1">Sales Velocity</p>
+                            <p id="analyticsSalesVelocity" class="text-3xl font-bold text-gray-800">0/hr</p>
+                        </div>
+                        <div class="bg-indigo-100 p-4 rounded-full">
+                            <i class="fas fa-tachometer-alt text-3xl text-indigo-600"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transaction History Table -->
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div class="px-6 py-4 bg-gradient-to-r from-indigo-600 to-indigo-700">
+                    <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                        <i class="fas fa-history"></i>
+                        <span>Transaction History</span>
+                    </h2>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b-2 border-gray-200">
+                            <tr>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Invoice #</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date & Time</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Customer</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Items</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Payment</th>
+                            </tr>
+                        </thead>
+                        <tbody id="analyticsTransactionTableBody" class="divide-y divide-gray-200">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty State -->
+                <div id="analyticsEmptyState" class="text-center py-12 hidden">
+                    <i class="fas fa-inbox text-6xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 text-lg">No transactions recorded yet</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- T051: Suppliers Section -->
+        <div id="suppliersSection" class="hidden">
+            <div class="bg-white rounded-xl shadow-lg">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center space-x-2">
+                        <i class="fas fa-truck text-indigo-600"></i>
+                        <span>Supplier Directory</span>
+                    </h2>
+                </div>
+
+                <div class="p-6">
+                    <div id="suppliersLoading" class="text-center py-12 hidden">
+                        <i class="fas fa-spinner fa-spin text-4xl text-indigo-600 mb-4"></i>
+                        <p class="text-gray-600">Loading suppliers...</p>
+                    </div>
+
+                    <div id="suppliersTable">
+                        <table class="min-w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Supplier Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Contact Person</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Phone</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Email</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Ledger Balance</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="suppliersTableBody" class="bg-white divide-y divide-gray-200">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="suppliersEmpty" class="text-center py-12 hidden">
+                        <i class="fas fa-truck text-6xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500 text-lg">No suppliers found</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- T062: Alerts/Notifications Section -->
+        <div id="alertsSection" class="hidden">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 flex items-center space-x-2">
+                    <i class="fas fa-bell text-indigo-600"></i>
+                    <span>System Alerts & Notifications</span>
+                </h2>
+                <p class="text-gray-600 mt-1">Monitor critical inventory alerts and low stock warnings</p>
+            </div>
+
+            <div id="alertsLoading" class="text-center py-12 hidden">
+                <i class="fas fa-spinner fa-spin text-4xl text-indigo-600 mb-4"></i>
+                <p class="text-gray-600">Loading alerts...</p>
+            </div>
+
+            <!-- Alerts grouped by type -->
+            <div id="alertsContainer" class="space-y-6">
+                <!-- Expiry Alerts Group -->
+                <div id="expiryAlertsGroup" class="hidden">
+                    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                        <div class="bg-orange-50 px-6 py-4 border-b border-orange-200">
+                            <h3 class="text-lg font-bold text-gray-800 flex items-center space-x-2">
+                                <i class="fas fa-clock text-orange-600"></i>
+                                <span>Expiry Warnings</span>
+                                <span id="expiryAlertCount" class="ml-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full">0</span>
+                            </h3>
+                        </div>
+                        <div id="expiryAlertsList" class="p-6 space-y-3">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Low Stock Alerts Group -->
+                <div id="lowStockAlertsGroup" class="hidden">
+                    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                        <div class="bg-yellow-50 px-6 py-4 border-b border-yellow-200">
+                            <h3 class="text-lg font-bold text-gray-800 flex items-center space-x-2">
+                                <i class="fas fa-exclamation-triangle text-yellow-600"></i>
+                                <span>Low Stock Warnings</span>
+                                <span id="stockAlertCount" class="ml-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">0</span>
+                            </h3>
+                        </div>
+                        <div id="stockAlertsList" class="p-6 space-y-3">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="noAlertsMessage" class="bg-white rounded-xl shadow-lg p-12 text-center">
+                    <i class="fas fa-check-circle text-6xl text-green-500 mb-4"></i>
+                    <h3 class="text-2xl font-bold text-gray-800 mb-2">All Clear!</h3>
+                    <p class="text-gray-600">No alerts at this time. Your inventory is in good shape.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Patient Modal -->
+    <div id="addPatientModal" class="fixed inset-0 z-50 hidden modal-backdrop bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full fade-in">
+            <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex items-center justify-between">
+                <h3 class="text-xl font-bold text-white flex items-center space-x-2">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Add New Patient</span>
+                </h3>
+                <button id="closePatientModalBtn" class="text-white hover:text-gray-200 transition">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            <form id="addPatientForm" class="p-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Full Name *</label>
+                        <input type="text" name="full_name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Contact Number *</label>
+                        <input type="text" name="contact_number" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+                        <input type="email" name="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Address</label>
+                        <textarea name="address" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"></textarea>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end space-x-3 pt-4 border-t">
+                    <button type="button" id="cancelPatientBtn" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold transition">Cancel</button>
+                    <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition flex items-center space-x-2">
+                        <i class="fas fa-save"></i>
+                        <span>Add Patient</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Medicine Modal -->
+    <div id="addMedicineModal" class="fixed inset-0 z-50 hidden modal-backdrop bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto fade-in">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex items-center justify-between">
+                <h3 class="text-xl font-bold text-white flex items-center space-x-2">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Add New Medicine</span>
+                </h3>
+                <button id="closeModalBtn" class="text-white hover:text-gray-200 transition">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <form id="addMedicineForm" class="p-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Brand Name -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Brand Name *</label>
+                        <input type="text" name="brand_name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                    </div>
+
+                    <!-- Generic Name -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Generic Name *</label>
+                        <input type="text" name="generic_name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                    </div>
+
+                    <!-- Batch Number -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Batch Number *</label>
+                        <input type="text" name="batch_number" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                    </div>
+
+                    <!-- Manufacturing Date -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Manufacturing Date *</label>
+                        <input type="date" name="manufacturing_date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                    </div>
+
+                    <!-- Expiry Date -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Expiry Date *</label>
+                        <input type="date" name="expiry_date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                    </div>
+
+                    <!-- Cost Price -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Cost Price *</label>
+                        <input type="number" name="cost_price" step="0.01" min="0" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                    </div>
+
+                    <!-- Selling Price -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Selling Price *</label>
+                        <input type="number" name="selling_price" step="0.01" min="0" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                    </div>
+
+                    <!-- Stock Quantity -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Stock Quantity *</label>
+                        <input type="number" name="stock_quantity" min="0" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                    </div>
+
+                    <!-- Reorder Threshold -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Reorder Threshold *</label>
+                        <input type="number" name="reorder_threshold" min="0" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                    </div>
+
+                    <!-- Supplier ID -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Supplier ID *</label>
+                        <input type="text" name="supplier_id" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                    </div>
+
+                    <!-- Supplier Name -->
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Supplier Name *</label>
+                        <input type="text" name="supplier_name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex items-center justify-end space-x-3 pt-4 border-t">
+                    <button type="button" id="cancelBtn" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition flex items-center space-x-2">
+                        <i class="fas fa-save"></i>
+                        <span>Add Medicine</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Checkout Confirmation Modal -->
+    <div id="checkoutConfirmModal" class="fixed inset-0 z-50 hidden modal-backdrop bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full fade-in">
+            <div class="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
+                <h3 class="text-xl font-bold text-white flex items-center space-x-2">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Confirm Checkout</span>
+                </h3>
+            </div>
+            <div class="p-6">
+                <p class="text-gray-700 text-lg mb-2">Are you sure this is the final bill?</p>
+                <p class="text-gray-600 text-sm mb-4">This action will deduct stock and cannot be undone.</p>
+                <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                    <div class="flex justify-between mb-2">
+                        <span class="text-gray-600">Total Items:</span>
+                        <span id="confirmItemCount" class="font-semibold">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Total Amount:</span>
+                        <span id="confirmTotalAmount" class="font-bold text-green-600 text-xl">$0.00</span>
+                    </div>
+                </div>
+                <div class="flex space-x-3">
+                    <button id="cancelCheckoutBtn" class="flex-1 px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold transition">Cancel</button>
+                    <button id="confirmCheckoutBtn" class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition">Confirm Checkout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Purchase Stock Modal -->
+    <div id="purchaseStockModal" class="fixed inset-0 z-50 hidden modal-backdrop bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full fade-in">
+            <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex items-center justify-between">
+                <h3 class="text-xl font-bold text-white flex items-center space-x-2">
+                    <i class="fas fa-box"></i>
+                    <span>Purchase Stock</span>
+                </h3>
+                <button id="closePurchaseModalBtn" class="text-white hover:text-gray-200 transition">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            <form id="purchaseStockForm" class="p-6 space-y-4">
+                <input type="hidden" id="purchaseSupplierId" name="supplier_id">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Supplier</label>
+                    <input type="text" id="purchaseSupplierName" readonly class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Medicine *</label>
+                    <select id="purchaseMedicineSelect" name="medicine_id" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option value="">-- Select medicine --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Quantity *</label>
+                    <input type="number" id="purchaseQuantity" name="quantity" min="1" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Cost Price per Unit *</label>
+                    <input type="number" id="purchaseCostPrice" name="cost_price" step="0.01" min="0" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="flex space-x-3 pt-4 border-t">
+                    <button type="button" id="cancelPurchaseBtn" class="flex-1 px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold transition">Cancel</button>
+                    <button type="submit" class="flex-1 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition">Add Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg hidden fade-in flex items-center space-x-3">
+        <i class="fas fa-check-circle text-2xl"></i>
+        <span id="toastMessage">Action completed successfully!</span>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        let allMedicines = [];
+        let allPatients = [];
+        let currentView = 'dashboard';
+
+        // DOM Elements
+        const searchInput = document.getElementById('searchInput');
+        const medicineTableBody = document.getElementById('medicineTableBody');
+        const loadingState = document.getElementById('loadingState');
+        const emptyState = document.getElementById('emptyState');
+        const addBtn = document.getElementById('addBtn');
+        const addBtnText = document.getElementById('addBtnText');
+        const addMedicineModal = document.getElementById('addMedicineModal');
+        const addPatientModal = document.getElementById('addPatientModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const closePatientModalBtn = document.getElementById('closePatientModalBtn');
+        const cancelPatientBtn = document.getElementById('cancelPatientBtn');
+        const addMedicineForm = document.getElementById('addMedicineForm');
+        const addPatientForm = document.getElementById('addPatientForm');
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+        const dashboardTab = document.getElementById('dashboardTab');
+        const dashboardSection = document.getElementById('dashboardSection');
+        const medicinesTab = document.getElementById('medicinesTab');
+        const patientsTab = document.getElementById('patientsTab');
+        const billingTab = document.getElementById('billingTab');
+        const analyticsTab = document.getElementById('analyticsTab');
+        const analyticsSection = document.getElementById('analyticsSection');
+        const medicinesSection = document.getElementById('medicinesSection');
+        const patientsSection = document.getElementById('patientsSection');
+        const billingSection = document.getElementById('billingSection');
+        const searchPatients = document.getElementById('searchPatients');
+        const patientsTableBody = document.getElementById('patientsTableBody');
+        const patientsLoading = document.getElementById('patientsLoading');
+        const patientsEmpty = document.getElementById('patientsEmpty');
+
+        // T027-T030: Billing elements
+        const medicineSelect = document.getElementById('medicineSelect');
+        const quantityInput = document.getElementById('quantityInput');
+        const addToCartBtn = document.getElementById('addToCartBtn');
+        const cartItems = document.getElementById('cartItems');
+        const cartTotal = document.getElementById('cartTotal');
+        const customerName = document.getElementById('customerName');
+        const customerPhone = document.getElementById('customerPhone');
+        const checkoutBtn = document.getElementById('checkoutBtn');
+        const invoiceHistory = document.getElementById('invoiceHistory');
+
+        let cart = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchMedicines();
+            setupEventListeners();
+            switchTab('dashboard'); // Set dashboard as default landing page
+        });
+
+        // Setup Event Listeners
+        function setupEventListeners() {
+            // Tab switching
+            dashboardTab.addEventListener('click', () => switchTab('dashboard'));
+            medicinesTab.addEventListener('click', () => switchTab('medicines'));
+            patientsTab.addEventListener('click', () => switchTab('patients'));
+            billingTab.addEventListener('click', () => switchTab('billing'));
+            analyticsTab.addEventListener('click', () => switchTab('analytics'));
+
+            // T027-T030: Billing event listeners
+            addToCartBtn.addEventListener('click', addToCart);
+            checkoutBtn.addEventListener('click', openCheckoutConfirmation);
+
+            // Checkout confirmation modal
+            document.getElementById('cancelCheckoutBtn').addEventListener('click', closeCheckoutConfirmation);
+            document.getElementById('confirmCheckoutBtn').addEventListener('click', confirmCheckout);
+            document.getElementById('checkoutConfirmModal').addEventListener('click', (e) => {
+                if (e.target.id === 'checkoutConfirmModal') closeCheckoutConfirmation();
+            });
+
+            // Purchase stock modal
+            document.getElementById('closePurchaseModalBtn').addEventListener('click', closePurchaseModal);
+            document.getElementById('cancelPurchaseBtn').addEventListener('click', closePurchaseModal);
+            document.getElementById('purchaseStockForm').addEventListener('submit', handlePurchaseStock);
+            document.getElementById('purchaseStockModal').addEventListener('click', (e) => {
+                if (e.target.id === 'purchaseStockModal') closePurchaseModal();
+            });
+
+            // Search with debounce
+            let searchTimeout;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    searchMedicines(e.target.value);
+                }, 300);
+            });
+
+            let patientSearchTimeout;
+            searchPatients.addEventListener('input', (e) => {
+                clearTimeout(patientSearchTimeout);
+                patientSearchTimeout = setTimeout(() => {
+                    searchPatientsData(e.target.value);
+                }, 300);
+            });
+
+            // Add button
+            addBtn.addEventListener('click', () => {
+                if (currentView === 'medicines') {
+                    openModal('medicine');
+                } else {
+                    openModal('patient');
+                }
+            });
+
+            // Modal controls - Medicine
+            closeModalBtn.addEventListener('click', () => closeModal('medicine'));
+            cancelBtn.addEventListener('click', () => closeModal('medicine'));
+            addMedicineModal.addEventListener('click', (e) => {
+                if (e.target === addMedicineModal) closeModal('medicine');
+            });
+
+            // Modal controls - Patient
+            closePatientModalBtn.addEventListener('click', () => closeModal('patient'));
+            cancelPatientBtn.addEventListener('click', () => closeModal('patient'));
+            addPatientModal.addEventListener('click', (e) => {
+                if (e.target === addPatientModal) closeModal('patient');
+            });
+
+            // Form submission
+            addMedicineForm.addEventListener('submit', handleAddMedicine);
+            addPatientForm.addEventListener('submit', handleAddPatient);
+        }
+
+        // Dashboard Functions
+        async function fetchDashboardMetrics() {
+            try {
+                const response = await fetch(`${API_BASE}/analytics/dashboard`);
+                const result = await response.json();
+
+                if (result.success) {
+                    displayDashboardMetrics(result.data);
+                }
+            } catch (error) {
+                console.error('Error fetching dashboard metrics:', error);
+            }
+        }
+
+        function displayDashboardMetrics(metrics) {
+            // Update metric cards
+            document.getElementById('dashRevenue').textContent = `$${metrics.revenueToday.toFixed(2)}`;
+            document.getElementById('dashTransactions').textContent = metrics.transactionsToday;
+            document.getElementById('dashNearExpiry').textContent = metrics.nearExpiryCount;
+            document.getElementById('dashLowStock').textContent = metrics.lowStockCount;
+
+            // Display top sellers
+            const topSellersList = document.getElementById('topSellersList');
+            if (metrics.topSellers.length === 0) {
+                topSellersList.innerHTML = `
+                    <div class="text-center text-gray-400 py-8">
+                        <i class="fas fa-chart-line text-4xl mb-2"></i>
+                        <p>No sales data yet</p>
+                    </div>
+                `;
+            } else {
+                topSellersList.innerHTML = metrics.topSellers.map((item, index) => `
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-2xl font-bold text-gray-400">${index + 1}</span>
+                            <div>
+                                <p class="font-semibold text-gray-800">${item.medicineName}</p>
+                                <p class="text-sm text-gray-600">${item.quantitySold} units sold</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold text-green-600">$${item.revenue.toFixed(2)}</p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Display low stock alerts
+            const lowStockAlertsList = document.getElementById('lowStockAlertsList');
+            if (metrics.lowStockAlerts.length === 0) {
+                lowStockAlertsList.innerHTML = `
+                    <div class="text-center text-gray-400 py-8">
+                        <i class="fas fa-check-circle text-4xl mb-2"></i>
+                        <p>All stock levels healthy</p>
+                    </div>
+                `;
+            } else {
+                lowStockAlertsList.innerHTML = metrics.lowStockAlerts.map(alert => `
+                    <div class="flex items-center justify-between p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+                        <div>
+                            <p class="font-semibold text-gray-800">${alert.medicineName}</p>
+                            <p class="text-sm text-gray-600">Stock: ${alert.currentStock} | Threshold: ${alert.reorderThreshold}</p>
+                        </div>
+                        <i class="fas fa-exclamation-triangle text-yellow-600 text-xl"></i>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Update dashboard metrics after checkout
+        function updateDashboardMetrics() {
+            // Refresh dashboard if currently viewing it
+            if (currentView === 'dashboard') {
+                fetchDashboardMetrics();
+            }
+        }
+
+        // Analytics & Ledger Functions
+        async function fetchAnalyticsSummary() {
+            try {
+                const response = await fetch(`${API_BASE}/analytics/summary`);
+                const result = await response.json();
+
+                if (result.success) {
+                    displayAnalyticsSummary(result.data);
+                }
+            } catch (error) {
+                console.error('Error fetching analytics summary:', error);
+            }
+        }
+
+        function displayAnalyticsSummary(summary) {
+            // Update summary metric cards
+            document.getElementById('analyticsTotalRevenue').textContent = `$${summary.totalRevenue.toFixed(2)}`;
+            document.getElementById('analyticsTotalTransactions').textContent = summary.totalTransactions;
+            document.getElementById('analyticsAvgTransaction').textContent = `$${summary.averageTransactionValue.toFixed(2)}`;
+            document.getElementById('analyticsSalesVelocity').textContent = `${summary.salesVelocity.transactionsPerHour.toFixed(1)}/hr`;
+
+            // Display transaction history table
+            const tableBody = document.getElementById('analyticsTransactionTableBody');
+            const emptyState = document.getElementById('analyticsEmptyState');
+
+            if (summary.recentInvoices.length === 0) {
+                tableBody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                tableBody.innerHTML = summary.recentInvoices.map(invoice => {
+                    const date = new Date(invoice.timestamp);
+                    const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    const formattedTime = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+                    return `
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="px-6 py-4">
+                                <span class="font-mono text-sm font-semibold text-indigo-600">${invoice.invoiceNumber}</span>
+                            </td>
+                            <td class="px-6 py-4 text-gray-600">
+                                <div>${formattedDate}</div>
+                                <div class="text-xs text-gray-500">${formattedTime}</div>
+                            </td>
+                            <td class="px-6 py-4 text-gray-800 font-medium">${invoice.customerName}</td>
+                            <td class="px-6 py-4 text-gray-600">${invoice.itemCount} items</td>
+                            <td class="px-6 py-4">
+                                <span class="font-bold text-green-600">$${invoice.totalAmount.toFixed(2)}</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                    ${invoice.paymentMethod}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // T030: Tab switching with billing support
+        function switchTab(view) {
+            currentView = view;
+
+            // Reset all tabs
+            [dashboardTab, medicinesTab, patientsTab, billingTab, analyticsTab].forEach(tab => {
+                tab.classList.remove('text-indigo-600', 'border-b-2', 'border-indigo-600');
+                tab.classList.add('text-gray-500');
+            });
+
+            // Hide all sections
+            dashboardSection.classList.add('hidden');
+            medicinesSection.classList.add('hidden');
+            patientsSection.classList.add('hidden');
+            billingSection.classList.add('hidden');
+            analyticsSection.classList.add('hidden');
+
+            if (view === 'dashboard') {
+                dashboardTab.classList.add('text-indigo-600', 'border-b-2', 'border-indigo-600');
+                dashboardTab.classList.remove('text-gray-500');
+                dashboardSection.classList.remove('hidden');
+                addBtn.classList.add('hidden'); // Hide add button on dashboard
+                fetchDashboardMetrics();
+            } else if (view === 'medicines') {
+                medicinesTab.classList.add('text-indigo-600', 'border-b-2', 'border-indigo-600');
+                medicinesTab.classList.remove('text-gray-500');
+                medicinesSection.classList.remove('hidden');
+                addBtnText.textContent = 'Add Medicine';
+            } else if (view === 'patients') {
+                patientsTab.classList.add('text-indigo-600', 'border-b-2', 'border-indigo-600');
+                patientsTab.classList.remove('text-gray-500');
+                patientsSection.classList.remove('hidden');
+                addBtnText.textContent = 'Add Patient';
+                if (allPatients.length === 0) fetchPatients();
+            } else if (view === 'billing') {
+                billingTab.classList.add('text-indigo-600', 'border-b-2', 'border-indigo-600');
+                billingTab.classList.remove('text-gray-500');
+                billingSection.classList.remove('hidden');
+                addBtn.classList.add('hidden'); // Hide add button in billing view
+                populateMedicineSelect();
+                displayInvoiceHistory();
+            } else if (view === 'analytics') {
+                analyticsTab.classList.add('text-indigo-600', 'border-b-2', 'border-indigo-600');
+                analyticsTab.classList.remove('text-gray-500');
+                analyticsSection.classList.remove('hidden');
+                addBtn.classList.add('hidden'); // Hide add button in analytics view
+                fetchAnalyticsSummary();
+            }
+
+            // Show/hide add button based on view
+            if (view === 'billing' || view === 'dashboard' || view === 'analytics') {
+                addBtn.classList.add('hidden');
+            } else {
+                addBtn.classList.remove('hidden');
+            }
+        }
+
+        // Fetch all medicines
+        async function fetchMedicines() {
+            showLoading();
+            try {
+                const response = await fetch(`${API_BASE}/medicines`);
+                const result = await response.json();
+
+                if (result.success) {
+                    allMedicines = result.data;
+                    displayMedicines(allMedicines);
+                    updateStatistics(allMedicines);
+
+                    // T039: Fetch and display real-time statistics
+                    await fetchInventoryStatistics();
+                } else {
+                    showError('Failed to fetch medicines');
+                }
+            } catch (error) {
+                console.error('Error fetching medicines:', error);
+                showError('Network error. Please check if the server is running.');
+            }
+            hideLoading();
+        }
+
+        // T039: Fetch inventory statistics from API
+        async function fetchInventoryStatistics() {
+            try {
+                const response = await fetch(`${API_BASE}/medicines/statistics`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const stats = result.data;
+                    document.getElementById('totalItems').textContent = stats.total_items;
+                    document.getElementById('totalValue').textContent = `$${stats.total_value}`;
+                    document.getElementById('nearExpiryCount').textContent = stats.near_expiry_count;
+                    document.getElementById('lowStockCount').textContent = stats.low_stock_count;
+                }
+            } catch (error) {
+                console.error('Error fetching statistics:', error);
+            }
+        }
+
+        // Search medicines
+        async function searchMedicines(query) {
+            if (!query.trim()) {
+                displayMedicines(allMedicines);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/medicines?search=${encodeURIComponent(query)}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    displayMedicines(result.data);
+                }
+            } catch (error) {
+                console.error('Error searching medicines:', error);
+            }
+        }
+
+        // Display medicines in table
+        function displayMedicines(medicines) {
+            medicineTableBody.innerHTML = '';
+
+            if (medicines.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            medicines.forEach(medicine => {
+                const row = createMedicineRow(medicine);
+                medicineTableBody.appendChild(row);
+            });
+        }
+
+        // Create table row for medicine
+        function createMedicineRow(medicine) {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50 transition';
+
+            const stockBadge = getStockBadge(medicine.stock_quantity, medicine.reorder_threshold);
+            const expiryBadge = getExpiryBadge(medicine.expiry_date);
+
+            row.innerHTML = `
+                <td class="px-6 py-4">
+                    <div class="font-semibold text-gray-800">${medicine.brand_name}</div>
+                </td>
+                <td class="px-6 py-4 text-gray-600">${medicine.generic_name}</td>
+                <td class="px-6 py-4">
+                    <span class="text-sm font-mono text-gray-500">${medicine.batch_number}</span>
+                </td>
+                <td class="px-6 py-4">
+                    ${stockBadge}
+                </td>
+                <td class="px-6 py-4">
+                    ${expiryBadge}
+                </td>
+                <td class="px-6 py-4">
+                    <div class="font-semibold text-gray-800">$${medicine.selling_price.toFixed(2)}</div>
+                </td>
+                <td class="px-6 py-4 text-gray-600 text-sm">${medicine.supplier_name}</td>
+            `;
+
+            return row;
+        }
+
+        // Get stock status badge
+        function getStockBadge(quantity, threshold) {
+            if (quantity === 0) {
+                return `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                    <i class="fas fa-times-circle mr-1"></i> Out of Stock
+                </span>`;
+            } else if (quantity <= threshold) {
+                return `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+                    <i class="fas fa-exclamation-triangle mr-1"></i> Low (${quantity})
+                </span>`;
+            } else {
+                return `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                    <i class="fas fa-check-circle mr-1"></i> In Stock (${quantity})
+                </span>`;
+            }
+        }
+
+        // Get expiry status badge
+        function getExpiryBadge(expiryDate) {
+            const today = new Date();
+            const expiry = new Date(expiryDate);
+            const daysUntilExpiry = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+
+            const formattedDate = expiry.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+            if (daysUntilExpiry < 0) {
+                return `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                    <i class="fas fa-ban mr-1"></i> Expired
+                </span>`;
+            } else if (daysUntilExpiry <= 60) {
+                return `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+                    <i class="fas fa-clock mr-1"></i> ${daysUntilExpiry} days
+                </span>`;
+            } else {
+                return `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                    <i class="fas fa-calendar-check mr-1"></i> ${formattedDate}
+                </span>`;
+            }
+        }
+
+        // Update statistics
+        function updateStatistics(medicines) {
+            const totalMedicines = medicines.length;
+            const lowStockMedicines = medicines.filter(m => m.stock_quantity > 0 && m.stock_quantity <= m.reorder_threshold);
+            const outOfStockMedicines = medicines.filter(m => m.stock_quantity === 0);
+
+            document.getElementById('totalMedicines').textContent = totalMedicines;
+            document.getElementById('lowStockCount').textContent = lowStockMedicines.length;
+            document.getElementById('outOfStockCount').textContent = outOfStockMedicines.length;
+
+            // Show names for low stock and out of stock
+            if (lowStockMedicines.length > 0) {
+                const names = lowStockMedicines.map(m => m.brand_name).join(', ');
+                document.getElementById('lowStockNames').textContent = names;
+            }
+
+            if (outOfStockMedicines.length > 0) {
+                const names = outOfStockMedicines.map(m => m.brand_name).join(', ');
+                document.getElementById('outOfStockNames').textContent = names;
+            }
+        }
+
+        // Fetch patients
+        async function fetchPatients() {
+            patientsLoading.classList.remove('hidden');
+            patientsEmpty.classList.add('hidden');
+            try {
+                const response = await fetch(`${API_BASE}/patients`);
+                const result = await response.json();
+
+                if (result.success) {
+                    allPatients = result.data;
+                    displayPatients(allPatients);
+                }
+            } catch (error) {
+                console.error('Error fetching patients:', error);
+                showToast('Failed to load patients', 'error');
+            }
+            patientsLoading.classList.add('hidden');
+        }
+
+        // Search patients
+        async function searchPatientsData(query) {
+            if (!query.trim()) {
+                displayPatients(allPatients);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/patients?search=${encodeURIComponent(query)}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    displayPatients(result.data);
+                }
+            } catch (error) {
+                console.error('Error searching patients:', error);
+            }
+        }
+
+        // Display patients
+        function displayPatients(patients) {
+            patientsTableBody.innerHTML = '';
+
+            if (patients.length === 0) {
+                patientsEmpty.classList.remove('hidden');
+                return;
+            }
+
+            patientsEmpty.classList.add('hidden');
+
+            patients.forEach(patient => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50 transition';
+                row.innerHTML = `
+                    <td class="px-6 py-4"><div class="font-semibold text-gray-800">${patient.full_name}</div></td>
+                    <td class="px-6 py-4 text-gray-600">${patient.contact_number}</td>
+                    <td class="px-6 py-4 text-gray-600">${patient.email || '-'}</td>
+                    <td class="px-6 py-4 text-gray-600 text-sm">${patient.address || '-'}</td>
+                `;
+                patientsTableBody.appendChild(row);
+            });
+        }
+
+        // Handle add patient form submission
+        async function handleAddPatient(e) {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const patientData = Object.fromEntries(formData);
+
+            try {
+                const response = await fetch(`${API_BASE}/patients`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(patientData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('Patient added successfully!');
+                    closeModal('patient');
+                    addPatientForm.reset();
+
+                    allPatients.unshift(result.data);
+                    displayPatients(allPatients);
+                } else {
+                    showToast(result.message || 'Failed to add patient', 'error');
+                }
+            } catch (error) {
+                console.error('Error adding patient:', error);
+                showToast('Network error. Please try again.', 'error');
+            }
+        }
+
+        // Handle add medicine form submission
+        async function handleAddMedicine(e) {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const medicineData = Object.fromEntries(formData);
+
+            try {
+                const response = await fetch(`${API_BASE}/medicines`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(medicineData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('Medicine added successfully!');
+                    closeModal('medicine');
+                    addMedicineForm.reset();
+
+                    allMedicines.unshift(result.data);
+                    displayMedicines(allMedicines);
+                    updateStatistics(allMedicines);
+                } else {
+                    showToast(result.message || 'Failed to add medicine', 'error');
+                }
+            } catch (error) {
+                console.error('Error adding medicine:', error);
+                showToast('Network error. Please try again.', 'error');
+            }
+        }
+
+        // Modal controls
+        function openModal(type) {
+            if (type === 'medicine') {
+                addMedicineModal.classList.remove('hidden');
+            } else {
+                addPatientModal.classList.remove('hidden');
+            }
+        }
+
+        function closeModal(type) {
+            if (type === 'medicine') {
+                addMedicineModal.classList.add('hidden');
+            } else {
+                addPatientModal.classList.add('hidden');
+            }
+        }
+
+        // Toast notification
+        function showToast(message, type = 'success') {
+            toastMessage.textContent = message;
+            toast.classList.remove('bg-green-500', 'bg-red-500');
+            toast.classList.add(type === 'success' ? 'bg-green-500' : 'bg-red-500');
+            toast.classList.remove('hidden');
+
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Loading states
+        function showLoading() {
+            loadingState.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+        }
+
+        function hideLoading() {
+            loadingState.classList.add('hidden');
+        }
+
+        function showError(message) {
+            console.error(message);
+            showToast(message, 'error');
+        }
+
+        // T027-T030: Billing Functions
+
+        // Populate medicine dropdown
+        function populateMedicineSelect() {
+            medicineSelect.innerHTML = '<option value="">-- Select a medicine --</option>';
+            allMedicines.forEach(med => {
+                const option = document.createElement('option');
+                option.value = med.id;
+                option.textContent = `${med.brand_name} - Stock: ${med.stock_quantity} - $${med.selling_price.toFixed(2)}`;
+                option.dataset.medicine = JSON.stringify(med);
+                medicineSelect.appendChild(option);
+            });
+        }
+
+        // Add item to cart
+        function addToCart() {
+            const selectedOption = medicineSelect.options[medicineSelect.selectedIndex];
+            if (!selectedOption.value) {
+                showToast('Please select a medicine', 'error');
+                return;
+            }
+
+            const medicine = JSON.parse(selectedOption.dataset.medicine);
+            const quantity = parseInt(quantityInput.value);
+
+            if (quantity <= 0) {
+                showToast('Quantity must be greater than 0', 'error');
+                return;
+            }
+
+            if (quantity > medicine.stock_quantity) {
+                showToast(`Insufficient stock. Only ${medicine.stock_quantity} available.`, 'error');
+                return;
+            }
+
+            // Check if already in cart
+            const existingItem = cart.find(item => item.medicine_id === medicine.id);
+            if (existingItem) {
+                existingItem.quantity += quantity;
+            } else {
+                cart.push({
+                    medicine_id: medicine.id,
+                    medicine_name: medicine.brand_name,
+                    quantity: quantity,
+                    unit_price: medicine.selling_price
+                });
+            }
+
+            updateCartDisplay();
+            quantityInput.value = 1;
+            medicineSelect.selectedIndex = 0;
+            showToast('Item added to cart', 'success');
+        }
+
+        // Update cart display
+        function updateCartDisplay() {
+            if (cart.length === 0) {
+                cartItems.innerHTML = `
+                    <div class="text-center text-gray-400 py-8">
+                        <i class="fas fa-shopping-cart text-4xl mb-2"></i>
+                        <p>Cart is empty</p>
+                    </div>
+                `;
+                cartTotal.textContent = '$0.00';
+                return;
+            }
+
+            let total = 0;
+            cartItems.innerHTML = cart.map(item => {
+                const subtotal = item.quantity * item.unit_price;
+                total += subtotal;
+                return `
+                    <div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+                        <div class="flex-1">
+                            <p class="font-semibold text-gray-800">${item.medicine_name}</p>
+                            <p class="text-sm text-gray-600">${item.quantity} × $${item.unit_price.toFixed(2)}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold text-gray-800">$${subtotal.toFixed(2)}</p>
+                            <button onclick="removeFromCart('${item.medicine_id}')" class="text-red-600 hover:text-red-700 text-sm">
+                                <i class="fas fa-trash"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            cartTotal.textContent = `$${total.toFixed(2)}`;
+        }
+
+        // Remove item from cart
+        function removeFromCart(medicineId) {
+            cart = cart.filter(item => item.medicine_id !== medicineId);
+            updateCartDisplay();
+            showToast('Item removed from cart', 'success');
+        }
+
+        // T027: Process checkout
+        async function processBillingCheckout() {
+            if (cart.length === 0) {
+                showToast('Cart is empty', 'error');
+                return;
+            }
+
+            try {
+                checkoutBtn.disabled = true;
+                checkoutBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+
+                const checkoutData = {
+                    items: cart,
+                    customer_name: customerName.value.trim() || 'Walk-in Customer',
+                    customer_phone: customerPhone.value.trim() || null,
+                    payment_method: 'cash'
+                };
+
+                const response = await fetch(`${API_BASE}/billing/checkout`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(checkoutData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('Checkout completed successfully!', 'success');
+
+                    // Clear cart and form
+                    cart = [];
+                    updateCartDisplay();
+                    customerName.value = '';
+                    customerPhone.value = '';
+
+                    // Refresh medicines list and invoice history
+                    await fetchMedicines();
+                    await displayInvoiceHistory();
+
+                    // Update dashboard metrics
+                    updateDashboardMetrics();
+                } else {
+                    showToast(result.message || 'Checkout failed', 'error');
+                }
+            } catch (error) {
+                console.error('Checkout error:', error);
+                showToast('Network error. Please try again.', 'error');
+            } finally {
+                checkoutBtn.disabled = false;
+                checkoutBtn.innerHTML = '<i class="fas fa-check-circle"></i><span>Process Checkout</span>';
+            }
+        }
+
+        // Checkout confirmation modal functions
+        function openCheckoutConfirmation() {
+            if (cart.length === 0) {
+                showToast('Cart is empty', 'error');
+                return;
+            }
+
+            const total = cart.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+            document.getElementById('confirmItemCount').textContent = cart.length;
+            document.getElementById('confirmTotalAmount').textContent = `$${total.toFixed(2)}`;
+            document.getElementById('checkoutConfirmModal').classList.remove('hidden');
+        }
+
+        function closeCheckoutConfirmation() {
+            document.getElementById('checkoutConfirmModal').classList.add('hidden');
+        }
+
+        async function confirmCheckout() {
+            closeCheckoutConfirmation();
+            await processBillingCheckout();
+        }
+
+        // Purchase stock modal functions
+        function openPurchaseModal(supplierId, supplierName) {
+            document.getElementById('purchaseSupplierId').value = supplierId;
+            document.getElementById('purchaseSupplierName').value = supplierName;
+
+            const select = document.getElementById('purchaseMedicineSelect');
+            select.innerHTML = '<option value="">-- Select medicine --</option>';
+            allMedicines.forEach(med => {
+                const option = document.createElement('option');
+                option.value = med.id;
+                option.textContent = `${med.brand_name} (Current: ${med.stock_quantity})`;
+                select.appendChild(option);
+            });
+
+            document.getElementById('purchaseStockModal').classList.remove('hidden');
+        }
+
+        function closePurchaseModal() {
+            document.getElementById('purchaseStockModal').classList.add('hidden');
+            document.getElementById('purchaseStockForm').reset();
+        }
+
+        async function handlePurchaseStock(e) {
+            e.preventDefault();
+
+            const supplierId = document.getElementById('purchaseSupplierId').value;
+            const medicineId = document.getElementById('purchaseMedicineSelect').value;
+            const quantity = parseInt(document.getElementById('purchaseQuantity').value);
+            const costPrice = parseFloat(document.getElementById('purchaseCostPrice').value);
+
+            try {
+                const response = await fetch(`${API_BASE}/suppliers/${supplierId}/purchase`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        medicine_id: medicineId,
+                        quantity: quantity,
+                        cost_price: costPrice
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('Stock added successfully!', 'success');
+                    closePurchaseModal();
+
+                    // Refresh data
+                    await fetchMedicines();
+                    await fetchSuppliers();
+                    updateDashboardMetrics();
+                } else {
+                    showToast(result.message || 'Failed to add stock', 'error');
+                }
+            } catch (error) {
+                console.error('Purchase error:', error);
+                showToast('Network error. Please try again.', 'error');
+            }
+        }
+
+        // T028: Display invoice history
+        async function displayInvoiceHistory() {
+            try {
+                const response = await fetch(`${API_BASE}/billing/invoices`);
+                const result = await response.json();
+
+                if (result.success && result.data.length > 0) {
+                    invoiceHistory.innerHTML = result.data.slice(0, 10).map(invoice => `
+                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <p class="font-bold text-gray-800">${invoice.invoice_number}</p>
+                                    <p class="text-xs text-gray-500">${new Date(invoice.timestamp).toLocaleString()}</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">
+                                    ${invoice.payment_status}
+                                </span>
+                            </div>
+                            <div class="text-sm text-gray-600 mb-2">
+                                <p><strong>Customer:</strong> ${invoice.customer_name || 'Walk-in'}</p>
+                                <p><strong>Items:</strong> ${invoice.items.length}</p>
+                            </div>
+                            <div class="flex justify-between items-center pt-2 border-t border-gray-200">
+                                <span class="text-sm text-gray-600">Total:</span>
+                                <span class="font-bold text-indigo-600">$${invoice.total_amount.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    invoiceHistory.innerHTML = `
+                        <div class="text-center text-gray-400 py-8">
+                            <i class="fas fa-file-invoice text-4xl mb-2"></i>
+                            <p>No invoices yet</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error fetching invoices:', error);
+            }
+        }
+
+        // T052: Fetch and display suppliers
+        async function fetchSuppliers() {
+            const suppliersLoading = document.getElementById('suppliersLoading');
+            const suppliersTableBody = document.getElementById('suppliersTableBody');
+            const suppliersEmpty = document.getElementById('suppliersEmpty');
+
+            suppliersLoading.classList.remove('hidden');
+            suppliersEmpty.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE}/suppliers`);
+                const result = await response.json();
+
+                if (result.success && result.data.length > 0) {
+                    suppliersTableBody.innerHTML = result.data.map(supplier => {
+                        const balanceClass = supplier.ledger_balance < 0 ? 'text-red-600' : 'text-green-600';
+                        return `
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="px-6 py-4 font-semibold text-gray-800">${supplier.name}</td>
+                                <td class="px-6 py-4 text-gray-600">${supplier.contact_person || 'N/A'}</td>
+                                <td class="px-6 py-4 text-gray-600">${supplier.phone}</td>
+                                <td class="px-6 py-4 text-gray-600">${supplier.email}</td>
+                                <td class="px-6 py-4">
+                                    <span class="font-bold ${balanceClass}">
+                                        $${Math.abs(supplier.ledger_balance).toFixed(2)} ${supplier.ledger_balance < 0 ? 'CR' : 'DR'}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <button onclick="openPurchaseModal('${supplier.id}', '${supplier.name}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold transition text-sm">
+                                        <i class="fas fa-box mr-1"></i>Purchase Stock
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                    suppliersEmpty.classList.add('hidden');
+                } else {
+                    suppliersTableBody.innerHTML = '';
+                    suppliersEmpty.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error fetching suppliers:', error);
+                showToast('Failed to load suppliers', 'error');
+            } finally {
+                suppliersLoading.classList.add('hidden');
+            }
+        }
+
+        // T053: Display supplier details
+        async function displaySupplierDetails(supplierId) {
+            try {
+                const response = await fetch(`${API_BASE}/suppliers/${supplierId}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const supplier = result.data;
+                    const detailsHtml = `
+                        <strong>ID:</strong> ${supplier.id}<br>
+                        <strong>Contact Person:</strong> ${supplier.contact_person || 'N/A'}<br>
+                        <strong>Address:</strong> ${supplier.address || 'N/A'}<br>
+                        <strong>City:</strong> ${supplier.city || 'N/A'}<br>
+                        <strong>Country:</strong> ${supplier.country || 'N/A'}<br>
+                        <strong>Ledger Balance:</strong> $${supplier.ledger_balance.toFixed(2)}
+                    `;
+                    showToast(`<div class="text-left">${detailsHtml}</div>`, 'info');
+                }
+            } catch (error) {
+                console.error('Error fetching supplier details:', error);
+                showToast('Failed to load supplier details', 'error');
+            }
+        }
+
+        // T063: Fetch and display alerts
+        async function fetchAlerts() {
+            const alertsLoading = document.getElementById('alertsLoading');
+            const alertsContainer = document.getElementById('alertsContainer');
+            const alertBadge = document.getElementById('alertBadge');
+
+            alertsLoading.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE}/medicines/alerts`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const alerts = result.data;
+
+                    // Update badge count
+                    if (alerts.length > 0) {
+                        alertBadge.textContent = alerts.length;
+                        alertBadge.classList.remove('hidden');
+                    } else {
+                        alertBadge.classList.add('hidden');
+                    }
+
+                    // Group alerts by type
+                    groupAlertsByCategory(alerts);
+                }
+            } catch (error) {
+                console.error('Error fetching alerts:', error);
+                showToast('Failed to load alerts', 'error');
+            } finally {
+                alertsLoading.classList.add('hidden');
+            }
+        }
+
+        // T064: Group alerts by category
+        function groupAlertsByCategory(alerts) {
+            const expiryAlerts = alerts.filter(a => a.type === 'expiry');
+            const stockAlerts = alerts.filter(a => a.type === 'low_stock');
+
+            const expiryAlertsGroup = document.getElementById('expiryAlertsGroup');
+            const lowStockAlertsGroup = document.getElementById('lowStockAlertsGroup');
+            const noAlertsMessage = document.getElementById('noAlertsMessage');
+            const expiryAlertsList = document.getElementById('expiryAlertsList');
+            const stockAlertsList = document.getElementById('stockAlertsList');
+            const expiryAlertCount = document.getElementById('expiryAlertCount');
+            const stockAlertCount = document.getElementById('stockAlertCount');
+
+            // Hide all groups initially
+            expiryAlertsGroup.classList.add('hidden');
+            lowStockAlertsGroup.classList.add('hidden');
+            noAlertsMessage.classList.add('hidden');
+
+            if (alerts.length === 0) {
+                noAlertsMessage.classList.remove('hidden');
+                return;
+            }
+
+            // Display expiry alerts
+            if (expiryAlerts.length > 0) {
+                expiryAlertsGroup.classList.remove('hidden');
+                expiryAlertCount.textContent = expiryAlerts.length;
+                expiryAlertsList.innerHTML = expiryAlerts.map(alert => {
+                    const severityColors = {
+                        critical: 'border-red-500 bg-red-50',
+                        high: 'border-orange-500 bg-orange-50',
+                        medium: 'border-yellow-500 bg-yellow-50',
+                        low: 'border-blue-500 bg-blue-50'
+                    };
+                    const severityIcons = {
+                        critical: 'fa-exclamation-circle text-red-600',
+                        high: 'fa-exclamation-triangle text-orange-600',
+                        medium: 'fa-info-circle text-yellow-600',
+                        low: 'fa-info text-blue-600'
+                    };
+                    return `
+                        <div class="border-l-4 ${severityColors[alert.severity]} p-4 rounded-r-lg">
+                            <div class="flex items-start space-x-3">
+                                <i class="fas ${severityIcons[alert.severity]} text-xl mt-1"></i>
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-800">${alert.message}</p>
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        ${new Date(alert.timestamp).toLocaleString()}
+                                        <span class="ml-2 px-2 py-0.5 bg-gray-200 rounded text-xs font-semibold uppercase">${alert.severity}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Display low stock alerts
+            if (stockAlerts.length > 0) {
+                lowStockAlertsGroup.classList.remove('hidden');
+                stockAlertCount.textContent = stockAlerts.length;
+                stockAlertsList.innerHTML = stockAlerts.map(alert => {
+                    const severityColors = {
+                        high: 'border-red-500 bg-red-50',
+                        medium: 'border-yellow-500 bg-yellow-50'
+                    };
+                    const severityIcons = {
+                        high: 'fa-times-circle text-red-600',
+                        medium: 'fa-exclamation-triangle text-yellow-600'
+                    };
+                    return `
+                        <div class="border-l-4 ${severityColors[alert.severity]} p-4 rounded-r-lg">
+                            <div class="flex items-start space-x-3">
+                                <i class="fas ${severityIcons[alert.severity]} text-xl mt-1"></i>
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-800">${alert.message}</p>
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        ${new Date(alert.timestamp).toLocaleString()}
+                                        <span class="ml-2 px-2 py-0.5 bg-gray-200 rounded text-xs font-semibold uppercase">${alert.severity}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Update showTab function to handle new tabs
+        function showTab(tabName) {
+            // Hide all sections
+            document.getElementById('medicinesSection').classList.add('hidden');
+            document.getElementById('patientsSection').classList.add('hidden');
+            document.getElementById('billingSection').classList.add('hidden');
+            document.getElementById('suppliersSection').classList.add('hidden');
+            document.getElementById('alertsSection').classList.add('hidden');
+
+            // Remove active state from all tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('text-indigo-600', 'border-b-2', 'border-indigo-600');
+                btn.classList.add('text-gray-500');
+            });
+
+            // Show selected section and activate tab
+            const tabMap = {
+                medicines: { section: 'medicinesSection', tab: 'medicinesTab', action: () => fetchMedicines() },
+                patients: { section: 'patientsSection', tab: 'patientsTab', action: () => fetchPatients() },
+                billing: { section: 'billingSection', tab: 'billingTab', action: () => { populateMedicineSelect(); displayInvoiceHistory(); } },
+                suppliers: { section: 'suppliersSection', tab: 'suppliersTab', action: () => fetchSuppliers() },
+                alerts: { section: 'alertsSection', tab: 'alertsTab', action: () => fetchAlerts() }
+            };
+
+            if (tabMap[tabName]) {
+                document.getElementById(tabMap[tabName].section).classList.remove('hidden');
+                const tabBtn = document.getElementById(tabMap[tabName].tab);
+                tabBtn.classList.add('text-indigo-600', 'border-b-2', 'border-indigo-600');
+                tabBtn.classList.remove('text-gray-500');
+
+                // Execute tab-specific action
+                if (tabMap[tabName].action) {
+                    tabMap[tabName].action();
+                }
+            }
+
+            // Update add button text based on active tab
+            if (tabName === 'medicines') {
+                addBtnText.textContent = 'Add Medicine';
+            } else if (tabName === 'patients') {
+                addBtnText.textContent = 'Add Patient';
+            } else {
+                addBtnText.textContent = 'Add';
+            }
+        }
+
+        // Wire up new tab buttons
+        document.getElementById('suppliersTab').addEventListener('click', () => showTab('suppliers'));
+        document.getElementById('alertsTab').addEventListener('click', () => showTab('alerts'));
+
+        // Auto-refresh alerts badge every 30 seconds
+        setInterval(async () => {
+            try {
+                const response = await fetch(`${API_BASE}/medicines/alerts`);
+                const result = await response.json();
+                if (result.success) {
+                    const alertBadge = document.getElementById('alertBadge');
+                    if (result.count > 0) {
+                        alertBadge.textContent = result.count;
+                        alertBadge.classList.remove('hidden');
+                    } else {
+                        alertBadge.classList.add('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Error refreshing alert count:', error);
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

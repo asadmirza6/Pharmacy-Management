@@ -1,0 +1,329 @@
+openapi: 3.0.3
+info:
+  title: Inventory Statistics & Alerts API
+  description: API endpoints for inventory statistics, near-expiry tracking, and alert aggregation (extends medicines API)
+  version: 1.0.0
+  contact:
+    name: Pharmacy System Development Team
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+
+tags:
+  - name: Statistics
+    description: Inventory metrics and aggregate calculations
+  - name: Alerts
+    description: Expiry warnings and low stock notifications
+
+paths:
+  /medicines/statistics:
+    get:
+      summary: Get inventory statistics
+      description: |
+        Retrieve computed aggregate statistics across all medicines including
+        total items, total value, near-expiry count, and low stock count.
+        Statistics are calculated on-demand from current inventory state.
+      operationId: getInventoryStatistics
+      tags:
+        - Statistics
+      responses:
+        '200':
+          description: Successful response with inventory statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/InventoryStatistics'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /medicines/near-expiry:
+    get:
+      summary: Get medicines nearing expiry
+      description: |
+        Retrieve all medicines expiring within the specified threshold.
+        Default threshold is 30 days. Includes days until expiry and severity level.
+      operationId: getNearExpiryMedicines
+      tags:
+        - Statistics
+        - Alerts
+      parameters:
+        - name: threshold
+          in: query
+          description: Number of days until expiry threshold
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+            default: 30
+            example: 30
+      responses:
+        '200':
+          description: Successful response with near-expiry medicines
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  threshold:
+                    type: integer
+                    description: Threshold used for filtering
+                    example: 30
+                  count:
+                    type: integer
+                    description: Number of medicines nearing expiry
+                    example: 2
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/NearExpiryMedicine'
+        '400':
+          description: Invalid threshold parameter
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Invalid threshold
+                  message:
+                    type: string
+                    example: Threshold must be between 1 and 365 days
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /medicines/alerts:
+    get:
+      summary: Get aggregated alerts
+      description: |
+        Retrieve all system alerts including expiry warnings and low stock notifications.
+        Alerts are computed on-demand and sorted by severity (critical → high → medium → low).
+      operationId: getAllAlerts
+      tags:
+        - Alerts
+      parameters:
+        - name: type
+          in: query
+          description: Filter alerts by type
+          schema:
+            type: string
+            enum: [expiry, low_stock]
+            example: expiry
+        - name: severity
+          in: query
+          description: Filter alerts by minimum severity
+          schema:
+            type: string
+            enum: [critical, high, medium, low]
+            example: high
+      responses:
+        '200':
+          description: Successful response with alert list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    description: Total number of alerts
+                    example: 5
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Alert'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  schemas:
+    InventoryStatistics:
+      type: object
+      required:
+        - total_products
+        - total_items
+        - total_value
+        - near_expiry_count
+        - low_stock_count
+        - computed_at
+      properties:
+        total_products:
+          type: integer
+          description: Count of distinct medicine records
+          example: 5
+        total_items:
+          type: integer
+          description: Sum of all stock quantities across all medicines
+          example: 1808
+        total_value:
+          type: string
+          description: Total inventory value (sum of stock_quantity × cost_price) formatted to 2 decimals
+          example: "12450.00"
+        near_expiry_count:
+          type: integer
+          description: Count of medicines expiring within 30 days
+          example: 1
+        low_stock_count:
+          type: integer
+          description: Count of medicines with stock at or below reorder threshold
+          example: 2
+        computed_at:
+          type: string
+          format: date-time
+          description: Timestamp when statistics were calculated
+          example: 2026-06-23T10:15:30.456Z
+
+    NearExpiryMedicine:
+      type: object
+      required:
+        - id
+        - brand_name
+        - batch_number
+        - expiry_date
+        - stock_quantity
+        - days_until_expiry
+        - severity
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Medicine UUID
+          example: a3f2c789-1234-5678-9abc-def012345678
+        brand_name:
+          type: string
+          description: Medicine brand name
+          example: Paracetamol 500mg Tablets
+        generic_name:
+          type: string
+          description: Generic/chemical name
+          example: Acetaminophen
+        batch_number:
+          type: string
+          description: Batch number for traceability
+          example: B2024-001
+        expiry_date:
+          type: string
+          format: date
+          description: Expiry date (ISO 8601)
+          example: 2027-01-14
+        stock_quantity:
+          type: integer
+          description: Current units in stock
+          example: 500
+        days_until_expiry:
+          type: integer
+          description: Calculated days remaining until expiry
+          example: 15
+        severity:
+          type: string
+          enum: [critical, high, medium, low]
+          description: |
+            Severity level based on days until expiry:
+            - critical: 0-7 days
+            - high: 8-14 days
+            - medium: 15-30 days
+            - low: 31+ days
+          example: medium
+        supplier_name:
+          type: string
+          description: Supplier name for reorder purposes
+          example: PharmaCorp International Ltd
+
+    Alert:
+      type: object
+      required:
+        - id
+        - type
+        - severity
+        - message
+        - timestamp
+      properties:
+        id:
+          type: string
+          description: Composite alert ID (format "type-medicine_id")
+          example: expiry-a3f2c789-1234-5678-9abc-def012345678
+        type:
+          type: string
+          enum: [expiry, low_stock, transaction_error]
+          description: Alert category
+          example: expiry
+        severity:
+          type: string
+          enum: [critical, high, medium, low]
+          description: |
+            Alert priority level:
+            - critical: Immediate action required (0-7 days to expiry, or out of stock)
+            - high: Urgent attention needed (8-14 days to expiry, or very low stock)
+            - medium: Monitor and plan action (15-30 days to expiry, or below reorder threshold)
+            - low: Informational
+          example: critical
+        message:
+          type: string
+          description: Human-readable alert text
+          example: Paracetamol 500mg Tablets expires in 5 days (Batch B2024-001)
+        timestamp:
+          type: string
+          format: date-time
+          description: When the alert was generated
+          example: 2026-06-23T10:00:00.000Z
+        medicine_id:
+          type: string
+          format: uuid
+          description: Related medicine UUID (if medicine-related alert)
+          example: a3f2c789-1234-5678-9abc-def012345678
+          nullable: true
+        invoice_id:
+          type: string
+          format: uuid
+          description: Related invoice UUID (if transaction-related alert)
+          nullable: true
+        details:
+          type: object
+          description: Additional context-specific details
+          properties:
+            days_until_expiry:
+              type: integer
+              example: 5
+            batch_number:
+              type: string
+              example: B2024-001
+            current_stock:
+              type: integer
+              example: 8
+            reorder_threshold:
+              type: integer
+              example: 10
+
+  responses:
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: Failed to fetch statistics
+              message:
+                type: string
+                example: Internal server error
