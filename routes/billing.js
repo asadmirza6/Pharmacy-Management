@@ -1,20 +1,16 @@
-// T016-T022: Billing API Routes
-// Implements customer checkout processing with inventory deduction
-
+// Billing API Routes - PostgreSQL Implementation
 const express = require('express');
 const router = express.Router();
-const medicineData = require('../data/medicines');
-const invoiceData = require('../data/invoices');
+const { pool } = require('../services/db');
 const sessionMetrics = require('../data/session-metrics');
 
 /**
- * T017-T020: POST /api/billing/checkout
- * Process customer sale with two-phase validation:
- * 1. Validate all items have sufficient stock
- * 2. Deduct inventory for all items
- * 3. Create invoice with denormalized details
+ * POST /api/billing/checkout
+ * Process customer sale with inventory deduction
  */
-router.post('/checkout', (req, res) => {
+router.post('/checkout', async (req, res) => {
+  const client = await pool.connect();
+
   try {
     const { items, customer_name, customer_phone, payment_method } = req.body;
 
@@ -27,12 +23,19 @@ router.post('/checkout', (req, res) => {
       });
     }
 
-    // T018: Phase 1 - Validate ALL items first (fail-fast)
+    // Start transaction
+    await client.query('BEGIN');
+
+    // Phase 1: Validate ALL items first
     const validatedItems = [];
     for (const item of items) {
-      const medicine = medicineData.getMedicineById(item.medicine_id);
+      const result = await client.query(
+        'SELECT * FROM medicines WHERE id = $1',
+        [item.medicine_id]
+      );
 
-      if (!medicine) {
+      if (result.rows.length === 0) {
+        await client.query('ROLLBACK');
         return res.status(400).json({
           success: false,
           error: 'Medicine not found',
@@ -40,7 +43,10 @@ router.post('/checkout', (req, res) => {
         });
       }
 
-      if (medicine.stock_quantity < item.quantity) {
+      const medicine = result.rows[0];
+
+      if (parseInt(medicine.stock_quantity) < item.quantity) {
+        await client.query('ROLLBACK');
         return res.status(400).json({
           success: false,
           error: 'Insufficient stock',
@@ -51,68 +57,133 @@ router.post('/checkout', (req, res) => {
       validatedItems.push({ medicine, requestedQuantity: item.quantity });
     }
 
-    // T019: Phase 2 - Deduct all items (only if all validations passed)
-    validatedItems.forEach(({ medicine, requestedQuantity }) => {
-      medicineData.updateMedicine(medicine.id, {
-        stock_quantity: medicine.stock_quantity - requestedQuantity
-      });
-    });
+    // Phase 2: Deduct stock for all items
+    for (const { medicine, requestedQuantity } of validatedItems) {
+      const newStock = parseInt(medicine.stock_quantity) - requestedQuantity;
+      await client.query(
+        'UPDATE medicines SET stock_quantity = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+        [newStock, medicine.id]
+      );
+    }
 
-    // T020: Phase 3 - Create invoice with denormalized item details
-    const invoiceItems = validatedItems.map(({ medicine, requestedQuantity }) => ({
-      medicine_id: medicine.id,
-      medicine_name: medicine.brand_name,
-      batch_number: medicine.batch_number,
-      quantity: requestedQuantity,
-      unit_price: parseFloat(medicine.selling_price),
-      subtotal: parseFloat((requestedQuantity * medicine.selling_price).toFixed(2))
-    }));
+    // Phase 3: Create invoice
+    const invoiceNumber = `INV-${Date.now()}`;
+    const totalAmount = validatedItems.reduce((sum, { medicine, requestedQuantity }) => {
+      return sum + (requestedQuantity * parseFloat(medicine.selling_price));
+    }, 0);
 
-    const total = invoiceData.calculateTotal(invoiceItems);
+    const invoiceResult = await client.query(
+      `INSERT INTO invoices (invoice_number, customer_name, customer_phone, total_amount, payment_method, payment_status, served_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        invoiceNumber,
+        customer_name || 'Walk-in Customer',
+        customer_phone || null,
+        totalAmount.toFixed(2),
+        payment_method || 'cash',
+        'completed',
+        'system'
+      ]
+    );
 
-    const invoice = invoiceData.createInvoice({
-      items: invoiceItems,
-      total_amount: parseFloat(total.toFixed(2)),
-      payment_method: payment_method || 'cash',
-      customer_name: customer_name || 'Walk-in Customer',
-      customer_phone: customer_phone || null,
-      served_by: 'system' // Placeholder until auth implemented
-    });
+    const invoice = invoiceResult.rows[0];
 
-    // Record transaction in session metrics
-    sessionMetrics.recordTransaction(invoice);
+    // Phase 4: Create invoice items
+    const invoiceItems = [];
+    for (const { medicine, requestedQuantity } of validatedItems) {
+      const subtotal = requestedQuantity * parseFloat(medicine.selling_price);
+
+      const itemResult = await client.query(
+        `INSERT INTO invoice_items (invoice_id, medicine_id, medicine_name, batch_number, quantity, unit_price, subtotal)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING *`,
+        [
+          invoice.id,
+          medicine.id,
+          medicine.brand_name,
+          medicine.batch_number,
+          requestedQuantity,
+          parseFloat(medicine.selling_price),
+          subtotal.toFixed(2)
+        ]
+      );
+
+      invoiceItems.push(itemResult.rows[0]);
+    }
+
+    // Commit transaction
+    await client.query('COMMIT');
+
+    // Record in session metrics
+    const metricsData = {
+      invoice_number: invoice.invoice_number,
+      total_amount: parseFloat(invoice.total_amount),
+      timestamp: invoice.timestamp,
+      items: invoiceItems.map(item => ({
+        medicine_id: item.medicine_id,
+        medicine_name: item.medicine_name,
+        quantity: parseInt(item.quantity),
+        subtotal: parseFloat(item.subtotal)
+      }))
+    };
+
+    console.log('Recording transaction with items:', metricsData.items.length);
+    sessionMetrics.recordTransaction(metricsData);
 
     res.status(201).json({
       success: true,
       message: 'Sale completed successfully',
-      data: invoice
+      data: {
+        ...invoice,
+        total_amount: parseFloat(invoice.total_amount),
+        items: invoiceItems.map(item => ({
+          ...item,
+          unit_price: parseFloat(item.unit_price),
+          subtotal: parseFloat(item.subtotal)
+        }))
+      }
     });
 
   } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Checkout error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to process checkout',
       message: error.message
     });
+  } finally {
+    client.release();
   }
 });
 
 /**
- * T021: GET /api/billing/invoices
- * Retrieve all invoices with optional filters (date range, status)
+ * GET /api/billing/invoices
+ * Fetch all invoices with items
  */
-router.get('/invoices', (req, res) => {
+router.get('/invoices', async (req, res) => {
   try {
-    const { from_date, to_date, status } = req.query;
+    const invoicesResult = await pool.query(
+      'SELECT * FROM invoices ORDER BY timestamp DESC LIMIT 50'
+    );
 
-    let invoices;
+    const invoices = [];
+    for (const invoice of invoicesResult.rows) {
+      const itemsResult = await pool.query(
+        'SELECT * FROM invoice_items WHERE invoice_id = $1',
+        [invoice.id]
+      );
 
-    if (status) {
-      invoices = invoiceData.getInvoicesByStatus(status);
-    } else if (from_date || to_date) {
-      invoices = invoiceData.getInvoicesByDateRange(from_date, to_date);
-    } else {
-      invoices = invoiceData.getAllInvoices();
+      invoices.push({
+        ...invoice,
+        total_amount: parseFloat(invoice.total_amount),
+        items: itemsResult.rows.map(item => ({
+          ...item,
+          unit_price: parseFloat(item.unit_price),
+          subtotal: parseFloat(item.subtotal)
+        }))
+      });
     }
 
     res.status(200).json({
@@ -120,8 +191,8 @@ router.get('/invoices', (req, res) => {
       count: invoices.length,
       data: invoices
     });
-
   } catch (error) {
+    console.error('Error fetching invoices:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch invoices',
@@ -131,28 +202,46 @@ router.get('/invoices', (req, res) => {
 });
 
 /**
- * T022: GET /api/billing/invoices/:id
- * Retrieve a single invoice by ID
+ * GET /api/billing/invoices/:id
+ * Get single invoice with items
  */
-router.get('/invoices/:id', (req, res) => {
+router.get('/invoices/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const invoice = invoiceData.getInvoiceById(id);
 
-    if (!invoice) {
+    const invoiceResult = await pool.query(
+      'SELECT * FROM invoices WHERE id = $1',
+      [id]
+    );
+
+    if (invoiceResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        error: 'Invoice not found',
-        message: `No invoice found with ID: ${id}`
+        error: 'Invoice not found'
       });
     }
 
+    const invoice = invoiceResult.rows[0];
+
+    const itemsResult = await pool.query(
+      'SELECT * FROM invoice_items WHERE invoice_id = $1',
+      [invoice.id]
+    );
+
     res.status(200).json({
       success: true,
-      data: invoice
+      data: {
+        ...invoice,
+        total_amount: parseFloat(invoice.total_amount),
+        items: itemsResult.rows.map(item => ({
+          ...item,
+          unit_price: parseFloat(item.unit_price),
+          subtotal: parseFloat(item.subtotal)
+        }))
+      }
     });
-
   } catch (error) {
+    console.error('Error fetching invoice:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch invoice',

@@ -1,25 +1,41 @@
-// Medicine Inventory API Routes
-// Mock implementation for client demo
-
+// Medicine API Routes - PostgreSQL Implementation
 const express = require('express');
 const router = express.Router();
-const medicineData = require('../data/medicines');
+const { pool } = require('../services/db');
 
 /**
  * GET /api/medicines
- * Fetch all medicines or search by query
- * Query params: ?search=keyword
+ * Fetch all medicines with optional search
  */
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { search } = req.query;
+    let query, params;
 
-    let medicines;
     if (search) {
-      medicines = medicineData.searchMedicines(search);
+      query = `
+        SELECT * FROM medicines
+        WHERE brand_name ILIKE $1
+           OR generic_name ILIKE $1
+           OR batch_number ILIKE $1
+        ORDER BY created_at DESC
+      `;
+      params = [`%${search}%`];
     } else {
-      medicines = medicineData.getAllMedicines();
+      query = 'SELECT * FROM medicines ORDER BY created_at DESC';
+      params = [];
     }
+
+    const result = await pool.query(query, params);
+
+    // Convert numeric fields from strings to numbers
+    const medicines = result.rows.map(med => ({
+      ...med,
+      cost_price: parseFloat(med.cost_price),
+      selling_price: parseFloat(med.selling_price),
+      stock_quantity: parseInt(med.stock_quantity),
+      reorder_threshold: parseInt(med.reorder_threshold)
+    }));
 
     res.status(200).json({
       success: true,
@@ -27,6 +43,7 @@ router.get('/', (req, res) => {
       data: medicines
     });
   } catch (error) {
+    console.error('Error fetching medicines:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch medicines',
@@ -36,40 +53,34 @@ router.get('/', (req, res) => {
 });
 
 /**
- * GET /api/medicines/low-stock
- * Fetch medicines with low stock (below reorder threshold)
+ * GET /api/medicines/statistics
+ * Get inventory statistics
  */
-router.get('/low-stock', (req, res) => {
+router.get('/statistics', async (req, res) => {
   try {
-    const lowStockMedicines = medicineData.getLowStockMedicines();
+    const statsQuery = `
+      SELECT
+        COUNT(*) as total_items,
+        COALESCE(SUM(stock_quantity * selling_price), 0) as total_value,
+        COUNT(CASE WHEN expiry_date <= CURRENT_DATE + INTERVAL '30 days' THEN 1 END) as near_expiry_count,
+        COUNT(CASE WHEN stock_quantity <= reorder_threshold THEN 1 END) as low_stock_count
+      FROM medicines
+    `;
+
+    const result = await pool.query(statsQuery);
+    const stats = result.rows[0];
 
     res.status(200).json({
       success: true,
-      count: lowStockMedicines.length,
-      data: lowStockMedicines
+      data: {
+        total_items: parseInt(stats.total_items),
+        total_value: parseFloat(stats.total_value).toFixed(2),
+        near_expiry_count: parseInt(stats.near_expiry_count),
+        low_stock_count: parseInt(stats.low_stock_count)
+      }
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch low stock medicines',
-      message: error.message
-    });
-  }
-});
-
-/**
- * T035: GET /api/medicines/statistics
- * Get inventory statistics including totals and near-expiry counts
- */
-router.get('/statistics', (req, res) => {
-  try {
-    const stats = medicineData.getInventoryStatistics();
-
-    res.status(200).json({
-      success: true,
-      data: stats
-    });
-  } catch (error) {
+    console.error('Error fetching statistics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch statistics',
@@ -79,30 +90,59 @@ router.get('/statistics', (req, res) => {
 });
 
 /**
- * T036: GET /api/medicines/near-expiry
- * Get medicines nearing expiry within threshold
+ * GET /api/medicines/low-stock
+ * Get medicines with low stock
  */
-router.get('/near-expiry', (req, res) => {
+router.get('/low-stock', async (req, res) => {
+  try {
+    const query = `
+      SELECT * FROM medicines
+      WHERE stock_quantity <= reorder_threshold
+      ORDER BY stock_quantity ASC
+    `;
+
+    const result = await pool.query(query);
+
+    res.status(200).json({
+      success: true,
+      count: result.rows.length,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching low stock medicines:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch low stock medicines',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/medicines/near-expiry
+ * Get medicines nearing expiry
+ */
+router.get('/near-expiry', async (req, res) => {
   try {
     const threshold = parseInt(req.query.threshold) || 30;
 
-    if (threshold < 1 || threshold > 365) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid threshold',
-        message: 'Threshold must be between 1 and 365 days'
-      });
-    }
+    const query = `
+      SELECT * FROM medicines
+      WHERE expiry_date <= CURRENT_DATE + INTERVAL '${threshold} days'
+        AND expiry_date >= CURRENT_DATE
+      ORDER BY expiry_date ASC
+    `;
 
-    const nearExpiry = medicineData.getNearExpiryMedicines(threshold);
+    const result = await pool.query(query);
 
     res.status(200).json({
       success: true,
       threshold: threshold,
-      count: nearExpiry.length,
-      data: nearExpiry
+      count: result.rows.length,
+      data: result.rows
     });
   } catch (error) {
+    console.error('Error fetching near-expiry medicines:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch near-expiry medicines',
@@ -113,26 +153,53 @@ router.get('/near-expiry', (req, res) => {
 
 /**
  * GET /api/medicines/alerts
- * Get aggregated alerts (expiry + low stock)
+ * Get all alerts (low stock + expiry)
  */
-router.get('/alerts', (req, res) => {
+router.get('/alerts', async (req, res) => {
   try {
-    const { type, severity } = req.query;
-    let alerts = medicineData.getAllAlerts();
+    // Get low stock alerts
+    const lowStockQuery = `
+      SELECT id, brand_name, stock_quantity, reorder_threshold, 'low_stock' as type,
+             CASE
+               WHEN stock_quantity = 0 THEN 'high'
+               ELSE 'medium'
+             END as severity
+      FROM medicines
+      WHERE stock_quantity <= reorder_threshold
+    `;
 
-    // Filter by type if provided
-    if (type) {
-      alerts = alerts.filter(a => a.type === type);
-    }
+    // Get expiry alerts
+    const expiryQuery = `
+      SELECT id, brand_name, expiry_date, 'expiry' as type,
+             CASE
+               WHEN expiry_date < CURRENT_DATE THEN 'critical'
+               WHEN expiry_date <= CURRENT_DATE + INTERVAL '7 days' THEN 'critical'
+               WHEN expiry_date <= CURRENT_DATE + INTERVAL '30 days' THEN 'high'
+               ELSE 'medium'
+             END as severity
+      FROM medicines
+      WHERE expiry_date <= CURRENT_DATE + INTERVAL '60 days'
+    `;
 
-    // Filter by severity if provided
-    if (severity) {
-      const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-      const minSeverity = severityOrder[severity];
-      if (minSeverity !== undefined) {
-        alerts = alerts.filter(a => severityOrder[a.severity] <= minSeverity);
-      }
-    }
+    const [lowStock, expiry] = await Promise.all([
+      pool.query(lowStockQuery),
+      pool.query(expiryQuery)
+    ]);
+
+    const alerts = [
+      ...lowStock.rows.map(row => ({
+        type: 'low_stock',
+        severity: row.severity,
+        message: `Low stock: ${row.brand_name} (${row.stock_quantity} remaining)`,
+        timestamp: new Date().toISOString()
+      })),
+      ...expiry.rows.map(row => ({
+        type: 'expiry',
+        severity: row.severity,
+        message: `Expiring soon: ${row.brand_name} (${row.expiry_date})`,
+        timestamp: new Date().toISOString()
+      }))
+    ];
 
     res.status(200).json({
       success: true,
@@ -140,6 +207,7 @@ router.get('/alerts', (req, res) => {
       data: alerts
     });
   } catch (error) {
+    console.error('Error fetching alerts:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch alerts',
@@ -150,14 +218,14 @@ router.get('/alerts', (req, res) => {
 
 /**
  * GET /api/medicines/:id
- * Fetch a single medicine by ID
+ * Get single medicine by ID
  */
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const medicine = medicineData.getMedicineById(id);
+    const result = await pool.query('SELECT * FROM medicines WHERE id = $1', [id]);
 
-    if (!medicine) {
+    if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'Medicine not found',
@@ -165,11 +233,19 @@ router.get('/:id', (req, res) => {
       });
     }
 
+    const medicine = result.rows[0];
     res.status(200).json({
       success: true,
-      data: medicine
+      data: {
+        ...medicine,
+        cost_price: parseFloat(medicine.cost_price),
+        selling_price: parseFloat(medicine.selling_price),
+        stock_quantity: parseInt(medicine.stock_quantity),
+        reorder_threshold: parseInt(medicine.reorder_threshold)
+      }
     });
   } catch (error) {
+    console.error('Error fetching medicine:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch medicine',
@@ -180,10 +256,9 @@ router.get('/:id', (req, res) => {
 
 /**
  * POST /api/medicines
- * Add a new medicine
- * Body: { brand_name, generic_name, batch_number, manufacturing_date, expiry_date, cost_price, selling_price, stock_quantity, reorder_threshold, supplier_id, supplier_name }
+ * Add new medicine
  */
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const {
       brand_name,
@@ -200,34 +275,53 @@ router.post('/', (req, res) => {
     } = req.body;
 
     // Validation
-    if (!brand_name || !generic_name || !batch_number) {
+    if (!brand_name || !generic_name || !batch_number || !expiry_date || !supplier_id) {
       return res.status(400).json({
         success: false,
         error: 'Validation failed',
-        message: 'Required fields: brand_name, generic_name, batch_number'
+        message: 'Required fields missing'
       });
     }
 
-    const newMedicine = medicineData.addMedicine({
+    const insertQuery = `
+      INSERT INTO medicines (
+        brand_name, generic_name, batch_number, manufacturing_date,
+        expiry_date, cost_price, selling_price, stock_quantity,
+        reorder_threshold, supplier_id, supplier_name
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      RETURNING *
+    `;
+
+    const values = [
       brand_name,
       generic_name,
       batch_number,
       manufacturing_date,
       expiry_date,
-      cost_price: parseFloat(cost_price),
-      selling_price: parseFloat(selling_price),
-      stock_quantity: parseInt(stock_quantity),
-      reorder_threshold: parseInt(reorder_threshold),
+      parseFloat(cost_price),
+      parseFloat(selling_price),
+      parseInt(stock_quantity),
+      parseInt(reorder_threshold),
       supplier_id,
       supplier_name
-    });
+    ];
 
+    const result = await pool.query(insertQuery, values);
+
+    const medicine = result.rows[0];
     res.status(201).json({
       success: true,
       message: 'Medicine added successfully',
-      data: newMedicine
+      data: {
+        ...medicine,
+        cost_price: parseFloat(medicine.cost_price),
+        selling_price: parseFloat(medicine.selling_price),
+        stock_quantity: parseInt(medicine.stock_quantity),
+        reorder_threshold: parseInt(medicine.reorder_threshold)
+      }
     });
   } catch (error) {
+    console.error('Error adding medicine:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to add medicine',
@@ -238,34 +332,60 @@ router.post('/', (req, res) => {
 
 /**
  * PUT /api/medicines/:id
- * Update an existing medicine
- * Body: Any medicine fields to update
+ * Update medicine
  */
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
 
-    // Don't allow ID modification
+    // Remove fields that shouldn't be updated
     delete updates.id;
     delete updates.created_at;
 
-    const updatedMedicine = medicineData.updateMedicine(id, updates);
-
-    if (!updatedMedicine) {
-      return res.status(404).json({
+    // Build dynamic update query
+    const keys = Object.keys(updates);
+    if (keys.length === 0) {
+      return res.status(400).json({
         success: false,
-        error: 'Medicine not found',
-        message: `No medicine found with ID: ${id}`
+        error: 'No fields to update'
       });
     }
 
+    const values = Object.values(updates);
+    const setClause = keys.map((key, index) => `${key} = $${index + 1}`).join(', ');
+    values.push(id);
+
+    const updateQuery = `
+      UPDATE medicines
+      SET ${setClause}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $${values.length}
+      RETURNING *
+    `;
+
+    const result = await pool.query(updateQuery, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Medicine not found'
+      });
+    }
+
+    const medicine = result.rows[0];
     res.status(200).json({
       success: true,
       message: 'Medicine updated successfully',
-      data: updatedMedicine
+      data: {
+        ...medicine,
+        cost_price: parseFloat(medicine.cost_price),
+        selling_price: parseFloat(medicine.selling_price),
+        stock_quantity: parseInt(medicine.stock_quantity),
+        reorder_threshold: parseInt(medicine.reorder_threshold)
+      }
     });
   } catch (error) {
+    console.error('Error updating medicine:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to update medicine',
@@ -276,18 +396,17 @@ router.put('/:id', (req, res) => {
 
 /**
  * DELETE /api/medicines/:id
- * Delete a medicine
+ * Delete medicine
  */
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const deleted = medicineData.deleteMedicine(id);
+    const result = await pool.query('DELETE FROM medicines WHERE id = $1 RETURNING *', [id]);
 
-    if (!deleted) {
+    if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        error: 'Medicine not found',
-        message: `No medicine found with ID: ${id}`
+        error: 'Medicine not found'
       });
     }
 
@@ -296,6 +415,7 @@ router.delete('/:id', (req, res) => {
       message: 'Medicine deleted successfully'
     });
   } catch (error) {
+    console.error('Error deleting medicine:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to delete medicine',
