@@ -66,6 +66,53 @@ router.get('/:id', (req, res) => {
 });
 
 /**
+ * POST /api/suppliers
+ * Add a new supplier
+ */
+router.post('/', (req, res) => {
+  try {
+    const { name, contact_person, phone, email, address } = req.body;
+
+    if (!name || !phone) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'Supplier name and phone are required'
+      });
+    }
+
+    // Generate new supplier ID
+    const allSuppliers = supplierData.getAllSuppliers();
+    const lastId = allSuppliers.length > 0
+      ? parseInt(allSuppliers[allSuppliers.length - 1].id.split('-')[1])
+      : 0;
+    const newId = `SUP-${String(lastId + 1).padStart(3, '0')}`;
+
+    const newSupplier = supplierData.addSupplier({
+      id: newId,
+      name,
+      contact_person: contact_person || null,
+      phone,
+      email: email || null,
+      address: address || null,
+      ledger_balance: 0.00
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Supplier added successfully',
+      data: newSupplier
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to add supplier',
+      message: error.message
+    });
+  }
+});
+
+/**
  * POST /api/suppliers/:id/purchase
  * Add stock to a medicine and update supplier ledger
  */
