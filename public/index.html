@@ -1715,19 +1715,26 @@
             const lowStockMedicines = medicines.filter(m => m.stock_quantity > 0 && m.stock_quantity <= m.reorder_threshold);
             const outOfStockMedicines = medicines.filter(m => m.stock_quantity === 0);
 
-            document.getElementById('totalMedicines').textContent = totalMedicines;
-            document.getElementById('lowStockCount').textContent = lowStockMedicines.length;
-            document.getElementById('outOfStockCount').textContent = outOfStockMedicines.length;
+            // Only update elements that exist in the DOM
+            const totalMedicinesEl = document.getElementById('totalMedicines');
+            const lowStockCountEl = document.getElementById('lowStockCount');
+            const outOfStockCountEl = document.getElementById('outOfStockCount');
+            const lowStockNamesEl = document.getElementById('lowStockNames');
+            const outOfStockNamesEl = document.getElementById('outOfStockNames');
+
+            if (totalMedicinesEl) totalMedicinesEl.textContent = totalMedicines;
+            if (lowStockCountEl) lowStockCountEl.textContent = lowStockMedicines.length;
+            if (outOfStockCountEl) outOfStockCountEl.textContent = outOfStockMedicines.length;
 
             // Show names for low stock and out of stock
-            if (lowStockMedicines.length > 0) {
+            if (lowStockMedicines.length > 0 && lowStockNamesEl) {
                 const names = lowStockMedicines.map(m => m.brand_name).join(', ');
-                document.getElementById('lowStockNames').textContent = names;
+                lowStockNamesEl.textContent = names;
             }
 
-            if (outOfStockMedicines.length > 0) {
+            if (outOfStockMedicines.length > 0 && outOfStockNamesEl) {
                 const names = outOfStockMedicines.map(m => m.brand_name).join(', ');
-                document.getElementById('outOfStockNames').textContent = names;
+                outOfStockNamesEl.textContent = names;
             }
         }
 
