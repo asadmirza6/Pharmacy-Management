@@ -149,6 +149,9 @@
                     <button id="alertsTab" class="tab-btn px-3 sm:px-6 py-2 sm:py-3 font-semibold text-gray-500 hover:text-indigo-600 whitespace-nowrap text-xs sm:text-base">
                         <i class="fas fa-bell mr-1 sm:mr-2"></i><span class="hidden sm:inline">Alerts</span><span class="sm:hidden">Alert</span> <span id="alertBadge" class="ml-1 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
                     </button>
+                    <button id="settingsTab" class="tab-btn px-3 sm:px-6 py-2 sm:py-3 font-semibold text-gray-500 hover:text-indigo-600 whitespace-nowrap text-xs sm:text-base">
+                        <i class="fas fa-cog mr-1 sm:mr-2"></i><span class="hidden sm:inline">Settings</span><span class="sm:hidden">Set</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -481,6 +484,108 @@
             </div>
         </div>
 
+    <!-- Create User Modal -->
+    <div id="createUserModal" class="hidden fixed inset-0 bg-black bg-opacity-50 modal-backdrop z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full fade-in">
+            <div class="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 flex justify-between items-center rounded-t-xl">
+                <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Create New User</span>
+                </h2>
+                <button onclick="closeCreateUserModal()" class="text-white hover:text-gray-200 text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="createUserForm" class="p-6">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Username *</label>
+                        <input type="text" id="newUsername" required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
+                        <input type="text" id="newFullName" required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Role *</label>
+                        <select id="newUserRole" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
+                            <option value="">-- Select Role --</option>
+                            <option value="Admin">Admin</option>
+                            <option value="Billing">Billing</option>
+                            <option value="Stock">Stock</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Password *</label>
+                        <input type="password" id="newUserPassword" required minlength="8"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
+                        <p class="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
+                    </div>
+                    <div class="flex space-x-3 pt-4">
+                        <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold transition">
+                            <i class="fas fa-check mr-2"></i>Create User
+                        </button>
+                        <button type="button" onclick="closeCreateUserModal()"
+                                class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-3 rounded-lg font-bold transition">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div id="resetPasswordModal" class="hidden fixed inset-0 bg-black bg-opacity-50 modal-backdrop z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full fade-in">
+            <div class="bg-gradient-to-r from-orange-600 to-orange-700 px-6 py-4 flex justify-between items-center rounded-t-xl">
+                <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                    <i class="fas fa-key"></i>
+                    <span>Reset User Password</span>
+                </h2>
+                <button onclick="closeResetPasswordModal()" class="text-white hover:text-gray-200 text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="resetPasswordForm" class="p-6">
+                <input type="hidden" id="resetUserId">
+                <div class="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded">
+                    <p class="text-sm text-gray-700">
+                        <i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>
+                        You are about to reset the password for: <strong id="resetUserName" class="text-gray-900"></strong>
+                    </p>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">New Password *</label>
+                        <input type="password" id="resetNewPassword" required minlength="8"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                        <p class="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Confirm Password *</label>
+                        <input type="password" id="resetConfirmPassword" required minlength="8"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                    </div>
+                    <div class="flex space-x-3 pt-4">
+                        <button type="submit" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-bold transition">
+                            <i class="fas fa-key mr-2"></i>Reset Password
+                        </button>
+                        <button type="button" onclick="closeResetPasswordModal()"
+                                class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-3 rounded-lg font-bold transition">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
         <div id="analyticsSection" class="hidden">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
@@ -614,6 +719,84 @@
                 </div>
             </div>
         </div>
+
+        <!-- Settings Section -->
+        <div id="settingsSection" class="hidden space-y-6">
+            <!-- User Management (Admin Only) -->
+            <div id="userManagementSection" class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center space-x-2">
+                        <i class="fas fa-users-cog text-indigo-600"></i>
+                        <span>User Management</span>
+                        <span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full ml-2">Admin Only</span>
+                    </h2>
+                    <button onclick="openCreateUserModal()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition flex items-center space-x-2">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Create New User</span>
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Username</th>
+                                <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Full Name</th>
+                                <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Role</th>
+                                <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Status</th>
+                                <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Last Login</th>
+                                <th class="px-4 py-3 text-center text-sm font-bold text-gray-700">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center py-6 text-gray-400">
+                                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                                    <p>Loading users...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Change Password (All Users) -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center space-x-2">
+                    <i class="fas fa-key text-green-600"></i>
+                    <span>Change My Password</span>
+                </h2>
+
+                <form id="changePasswordForm" class="max-w-md">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Current Password *</label>
+                            <input type="password" id="currentPassword" required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">New Password *</label>
+                            <input type="password" id="newPassword" required minlength="8"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <p class="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Confirm New Password *</label>
+                            <input type="password" id="confirmPassword" required minlength="8"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <div class="flex space-x-3">
+                            <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold transition">
+                                <i class="fas fa-check mr-2"></i>Change Password
+                            </button>
+                            <button type="reset" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-3 rounded-lg font-bold transition">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
     </main>
 
     <!-- Add Medicine Modal -->
@@ -663,13 +846,18 @@
 
                     <!-- Units Per Package -->
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Units Per Package *</label>
-                        <input type="number" id="unitsPerPackage" min="1" value="10" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Units Per Package *
+                            <span class="text-xs text-gray-500">(Tablets/Pills per Strip/Box)</span>
+                        </label>
+                        <input type="number" id="unitsPerPackage" min="1" value="10" required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                               onchange="calculateUnitPrices()">
                     </div>
 
                     <!-- Stock Quantity -->
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Stock Quantity (Units) *</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Stock Quantity (Total Units) *</label>
                         <input type="number" id="stockQuantity" min="0" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
                     </div>
 
@@ -685,16 +873,46 @@
                         <input type="date" id="expiryDate" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
                     </div>
 
-                    <!-- Cost Price (Per Unit) -->
+                    <!-- Package Cost Price -->
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Cost Price (Per Unit) *</label>
-                        <input type="number" id="costPrice" min="0" step="0.01" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Package Cost Price *
+                            <span class="text-xs text-gray-500">(Price per Strip/Box)</span>
+                        </label>
+                        <input type="number" id="packageCostPrice" min="0" step="0.01" required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                               onchange="calculateUnitPrices()">
                     </div>
 
-                    <!-- Selling Price (Per Unit) -->
+                    <!-- Package Selling Price -->
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Selling Price (Per Unit) *</label>
-                        <input type="number" id="sellingPrice" min="0" step="0.01" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Package Selling Price *
+                            <span class="text-xs text-gray-500">(Price per Strip/Box)</span>
+                        </label>
+                        <input type="number" id="packageSellingPrice" min="0" step="0.01" required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                               onchange="calculateUnitPrices()">
+                    </div>
+
+                    <!-- Unit Cost Price (Calculated - Read Only) -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Unit Cost Price (Auto-calculated)
+                            <span class="text-xs text-gray-500">(Per Tablet/Pill)</span>
+                        </label>
+                        <input type="number" id="costPrice" readonly
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 font-mono font-semibold">
+                    </div>
+
+                    <!-- Unit Selling Price (Calculated - Read Only) -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Unit Selling Price (Auto-calculated)
+                            <span class="text-xs text-gray-500">(Per Tablet/Pill)</span>
+                        </label>
+                        <input type="number" id="sellingPrice" readonly
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 font-mono font-semibold">
                     </div>
 
                     <!-- Reorder Threshold -->
@@ -791,28 +1009,30 @@
             console.log('🎭 Applying UI restrictions for role:', role);
 
             if (role === 'Billing') {
-                // Billing user - hide inventory management features
+                // Billing user - hide inventory management features and user management
                 hideElements([
                     '#inventoryTab',
                     '#suppliersTab',
                     '#alertsTab',
-                    '#addBtn' // Hide add medicine button
+                    '#addBtn', // Hide add medicine button
+                    '#userManagementSection' // Hide user management
                 ]);
                 console.log('✅ Billing user UI applied');
             }
 
             if (role === 'Stock') {
-                // Stock user - hide billing and analytics
+                // Stock user - hide billing, analytics, and user management
                 hideElements([
                     '#billingTab',
-                    '#analyticsTab'
+                    '#analyticsTab',
+                    '#userManagementSection' // Hide user management
                 ]);
                 console.log('✅ Stock user UI applied');
             }
 
             // Admin sees everything - no restrictions
             if (role === 'Admin') {
-                console.log('✅ Admin user - full access');
+                console.log('✅ Admin user - full access (including User Management)');
             }
         }
 
@@ -882,7 +1102,8 @@
             analyticsTab: 'analyticsSection',
             suppliersTab: 'suppliersSection',
             inventoryTab: 'inventorySection',
-            alertsTab: 'alertsSection'
+            alertsTab: 'alertsSection',
+            settingsTab: 'settingsSection'
         };
 
         Object.keys(tabs).forEach(tabId => {
@@ -905,6 +1126,7 @@
                 }
                 if (tabId === 'analyticsTab') fetchAnalyticsData();
                 if (tabId === 'suppliersTab') fetchSuppliersData();
+                if (tabId === 'settingsTab') fetchUsers(); // Load users when settings tab opens
                 if (tabId === 'inventoryTab') fetchInventoryLogData();
                 if (tabId === 'alertsTab') fetchSystemAlertsData();
             });
@@ -1090,6 +1312,8 @@
                     document.getElementById('batchNumber').value = med.batch_number;
                     document.getElementById('packageType').value = med.package_type || 'piece';
                     document.getElementById('unitsPerPackage').value = med.units_per_package || 1;
+                    document.getElementById('packageCostPrice').value = med.package_cost_price || 0;
+                    document.getElementById('packageSellingPrice').value = med.package_selling_price || 0;
                     document.getElementById('stockQuantity').value = med.stock_quantity;
                     document.getElementById('manufacturingDate').value = med.manufacturing_date ? med.manufacturing_date.split('T')[0] : '';
                     document.getElementById('expiryDate').value = med.expiry_date.split('T')[0];
@@ -1378,6 +1602,33 @@
         });
 
         // 7. ADD MEDICINE MODAL FUNCTIONS
+
+        // Auto-calculate unit prices from package prices
+        function calculateUnitPrices() {
+            const packageCostPrice = parseFloat(document.getElementById('packageCostPrice').value) || 0;
+            const packageSellingPrice = parseFloat(document.getElementById('packageSellingPrice').value) || 0;
+            const unitsPerPackage = parseInt(document.getElementById('unitsPerPackage').value) || 1;
+
+            if (unitsPerPackage > 0) {
+                const unitCostPrice = packageCostPrice / unitsPerPackage;
+                const unitSellingPrice = packageSellingPrice / unitsPerPackage;
+
+                document.getElementById('costPrice').value = unitCostPrice.toFixed(2);
+                document.getElementById('sellingPrice').value = unitSellingPrice.toFixed(2);
+
+                console.log('📊 Unit prices calculated:', {
+                    packageCostPrice,
+                    packageSellingPrice,
+                    unitsPerPackage,
+                    unitCostPrice: unitCostPrice.toFixed(2),
+                    unitSellingPrice: unitSellingPrice.toFixed(2)
+                });
+            }
+        }
+
+        // Make calculateUnitPrices globally accessible
+        window.calculateUnitPrices = calculateUnitPrices;
+
         async function loadSuppliers() {
             try {
                 const res = await fetch(`${API_BASE}/suppliers`, {
@@ -1435,6 +1686,8 @@
                 batch_number: document.getElementById('batchNumber').value,
                 package_type: document.getElementById('packageType').value,
                 units_per_package: parseInt(document.getElementById('unitsPerPackage').value),
+                package_cost_price: parseFloat(document.getElementById('packageCostPrice').value),
+                package_selling_price: parseFloat(document.getElementById('packageSellingPrice').value),
                 stock_quantity: parseInt(document.getElementById('stockQuantity').value),
                 manufacturing_date: document.getElementById('manufacturingDate').value || null,
                 expiry_date: document.getElementById('expiryDate').value,
@@ -1883,6 +2136,7 @@
                             <div class="mt-2 text-sm text-gray-600">
                                 <p>Payment Method: ${invoice.payment_method || 'Cash'}</p>
                                 <p>Payment Status: <span class="text-green-600 font-semibold">${invoice.payment_status}</span></p>
+                                <p class="mt-1"><i class="fas fa-user-check mr-1"></i>Processed By: <span class="font-semibold text-indigo-600">${invoice.served_by || 'System'}</span></p>
                             </div>
                         </div>
 
@@ -1939,6 +2193,208 @@
                 console.error('Dashboard fetch error:', err);
             }
         }
+
+        // 11. ADMIN SETTINGS - USER MANAGEMENT
+
+        // Fetch and display users
+        async function fetchUsers() {
+            try {
+                const res = await fetch(`${API_BASE}/users`, {
+                    credentials: 'include'
+                });
+                const data = await res.json();
+
+                if (!data.success) {
+                    document.getElementById('usersTableBody').innerHTML = `
+                        <tr><td colspan="6" class="text-center py-6 text-red-500">
+                            <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
+                            <p>${data.error || 'Failed to load users'}</p>
+                        </td></tr>
+                    `;
+                    return;
+                }
+
+                const users = data.data || [];
+
+                if (users.length === 0) {
+                    document.getElementById('usersTableBody').innerHTML = `
+                        <tr><td colspan="6" class="text-center py-6 text-gray-400">No users found</td></tr>
+                    `;
+                    return;
+                }
+
+                const tbody = document.getElementById('usersTableBody');
+                tbody.innerHTML = users.map(user => `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-4 py-3 font-mono text-sm text-gray-800">${user.username}</td>
+                        <td class="px-4 py-3 text-sm text-gray-800">${user.full_name}</td>
+                        <td class="px-4 py-3 text-sm">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold ${
+                                user.role_name === 'Admin' ? 'bg-red-100 text-red-700' :
+                                user.role_name === 'Billing' ? 'bg-green-100 text-green-700' :
+                                'bg-blue-100 text-blue-700'
+                            }">
+                                ${user.role_name}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-sm">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold ${
+                                user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }">
+                                ${user.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-xs text-gray-600">
+                            ${user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <button onclick="openResetPasswordModal(${user.user_id}, '${user.username}')"
+                                    class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-xs font-semibold transition"
+                                    ${user.username === 'pharmacy_admin' ? 'disabled title="Cannot reset main admin"' : ''}>
+                                <i class="fas fa-key mr-1"></i>Reset Password
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                console.log('✅ Users loaded:', users.length);
+            } catch (err) {
+                console.error('Error fetching users:', err);
+                document.getElementById('usersTableBody').innerHTML = `
+                    <tr><td colspan="6" class="text-center py-6 text-red-500">
+                        <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
+                        <p>Error loading users</p>
+                    </td></tr>
+                `;
+            }
+        }
+
+        // Create User Modal Functions
+        window.openCreateUserModal = function() {
+            document.getElementById('createUserModal').classList.remove('hidden');
+        };
+
+        window.closeCreateUserModal = function() {
+            document.getElementById('createUserModal').classList.add('hidden');
+            document.getElementById('createUserForm').reset();
+        };
+
+        // Create User Form Submission
+        document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const userData = {
+                username: document.getElementById('newUsername').value.trim(),
+                fullName: document.getElementById('newFullName').value.trim(),
+                role: document.getElementById('newUserRole').value,
+                password: document.getElementById('newUserPassword').value
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(userData)
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    alert('✅ User created successfully!');
+                    closeCreateUserModal();
+                    fetchUsers(); // Refresh user list
+                } else {
+                    alert('❌ Error: ' + (data.error || data.message));
+                }
+            } catch (err) {
+                console.error('Error creating user:', err);
+                alert('❌ Failed to create user');
+            }
+        });
+
+        // Reset Password Modal Functions
+        window.openResetPasswordModal = function(userId, username) {
+            document.getElementById('resetUserId').value = userId;
+            document.getElementById('resetUserName').textContent = username;
+            document.getElementById('resetPasswordModal').classList.remove('hidden');
+        };
+
+        window.closeResetPasswordModal = function() {
+            document.getElementById('resetPasswordModal').classList.add('hidden');
+            document.getElementById('resetPasswordForm').reset();
+        };
+
+        // Reset Password Form Submission
+        document.getElementById('resetPasswordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const newPassword = document.getElementById('resetNewPassword').value;
+            const confirmPassword = document.getElementById('resetConfirmPassword').value;
+
+            if (newPassword !== confirmPassword) {
+                alert('❌ Passwords do not match!');
+                return;
+            }
+
+            const userId = document.getElementById('resetUserId').value;
+
+            try {
+                const res = await fetch(`${API_BASE}/users/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ userId, newPassword })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    alert('✅ Password reset successfully!');
+                    closeResetPasswordModal();
+                } else {
+                    alert('❌ Error: ' + (data.error || data.message));
+                }
+            } catch (err) {
+                console.error('Error resetting password:', err);
+                alert('❌ Failed to reset password');
+            }
+        });
+
+        // Change Own Password Form Submission
+        document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (newPassword !== confirmPassword) {
+                alert('❌ New passwords do not match!');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/users/change-my-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ currentPassword, newPassword })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    alert('✅ Password changed successfully!');
+                    document.getElementById('changePasswordForm').reset();
+                } else {
+                    alert('❌ Error: ' + (data.error || data.message));
+                }
+            } catch (err) {
+                console.error('Error changing password:', err);
+                alert('❌ Failed to change password');
+            }
+        });
 
         // Auto initialization load on system mounting
         window.addEventListener('DOMContentLoaded', async () => {

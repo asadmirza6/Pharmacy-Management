@@ -83,7 +83,7 @@ router.post('/checkout', async (req, res) => {
         totalAmount.toFixed(2),
         payment_method || 'cash',
         'completed',
-        'system'
+        req.session.user?.username || 'system' // Store logged-in user
       ]
     );
 

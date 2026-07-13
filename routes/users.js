@@ -286,6 +286,85 @@ router.delete('/:userId', async (req, res) => {
 });
 
 /**
+ * POST /api/users/change-my-password
+ * Change own password (requires current password verification)
+ */
+router.post('/change-my-password', async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({
+      success: false,
+      error: 'Current password and new password are required'
+    });
+  }
+
+  // Validate new password strength
+  if (newPassword.length < 8) {
+    return res.status(400).json({
+      success: false,
+      error: 'New password must be at least 8 characters long'
+    });
+  }
+
+  try {
+    const userId = req.session.user.userId;
+
+    // Get current password hash
+    const result = await pool.query(
+      'SELECT password_hash, username FROM users WHERE user_id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Verify current password
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash);
+
+    if (!isValidPassword) {
+      return res.status(401).json({
+        success: false,
+        error: 'Current password is incorrect'
+      });
+    }
+
+    // Hash new password
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await pool.query(
+      'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2',
+      [newPasswordHash, userId]
+    );
+
+    // Log action
+    await pool.query(
+      'INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES ($1, $2, $3, $4)',
+      [userId, 'PASSWORD_CHANGED', 'User changed their own password', req.ip]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+
+  } catch (error) {
+    console.error('Error changing password:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to change password'
+    });
+  }
+});
+
+/**
  * GET /api/users/roles
  * Get available roles
  */
