@@ -1267,6 +1267,7 @@
                 const data = await res.json();
                 medicinesData = data.success ? (data.data || data) : [];
 
+<<<<<<< HEAD
                 renderMedicinesTable(medicinesData);
                 updateMedicineStats(medicinesData);
             } catch (err) {
@@ -1276,6 +1277,242 @@
                         <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
                         <p>Error loading medicines. Check console.</p>
                     </td></tr>
+=======
+                if (result.success) {
+                    allMedicines = result.data;
+                    displayMedicines(allMedicines);
+                    updateStatistics(allMedicines);
+
+                    // T039: Fetch and display real-time statistics
+                    await fetchInventoryStatistics();
+                } else {
+                    showError('Failed to fetch medicines');
+                }
+            } catch (error) {
+                console.error('Error fetching medicines:', error);
+                showError('Network error. Please check if the server is running.');
+            }
+            hideLoading();
+        }
+
+        // T039: Fetch inventory statistics from API
+        async function fetchInventoryStatistics() {
+            try {
+                const response = await fetch(`${API_BASE}/medicines/statistics`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const stats = result.data;
+                    document.getElementById('totalItems').textContent = stats.total_items;
+                    document.getElementById('totalValue').textContent = `$${stats.total_value}`;
+                    document.getElementById('nearExpiryCount').textContent = stats.near_expiry_count;
+                    document.getElementById('lowStockCount').textContent = stats.low_stock_count;
+                }
+            } catch (error) {
+                console.error('Error fetching statistics:', error);
+            }
+        }
+
+        // Search medicines
+        async function searchMedicines(query) {
+            if (!query.trim()) {
+                displayMedicines(allMedicines);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/medicines?search=${encodeURIComponent(query)}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    displayMedicines(result.data);
+                }
+            } catch (error) {
+                console.error('Error searching medicines:', error);
+            }
+        }
+
+        // Display medicines in table
+        function displayMedicines(medicines) {
+            medicineTableBody.innerHTML = '';
+
+            if (medicines.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            medicines.forEach(medicine => {
+                const row = createMedicineRow(medicine);
+                medicineTableBody.appendChild(row);
+            });
+        }
+
+        // Create table row for medicine
+        function createMedicineRow(medicine) {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50 transition cursor-pointer';
+
+            const stockBadge = getStockBadge(medicine.stock_quantity, medicine.reorder_threshold);
+            const expiryBadge = getExpiryBadge(medicine.expiry_date);
+
+            row.innerHTML = `
+                <td class="px-6 py-4">
+                    <div class="font-semibold text-gray-800">${medicine.brand_name}</div>
+                </td>
+                <td class="px-6 py-4 text-gray-600">${medicine.generic_name}</td>
+                <td class="px-6 py-4">
+                    <span class="text-sm font-mono text-gray-500">${medicine.batch_number}</span>
+                </td>
+                <td class="px-6 py-4">
+                    ${stockBadge}
+                </td>
+                <td class="px-6 py-4">
+                    ${expiryBadge}
+                </td>
+                <td class="px-6 py-4">
+                    <div class="font-semibold text-gray-800">$${medicine.selling_price.toFixed(2)}</div>
+                </td>
+                <td class="px-6 py-4 text-gray-600 text-sm">${medicine.supplier_name}</td>
+                <td class="px-6 py-4">
+                    <button onclick="quickAddToCart('${medicine.id}')" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg font-semibold transition text-sm flex items-center space-x-1">
+                        <i class="fas fa-cart-plus"></i>
+                        <span>Add</span>
+                    </button>
+                </td>
+            `;
+
+            return row;
+        }
+
+        // Get stock status badge
+        function getStockBadge(quantity, threshold) {
+            if (quantity === 0) {
+                return `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                    <i class="fas fa-times-circle mr-1"></i> Out of Stock
+                </span>`;
+            } else if (quantity <= threshold) {
+                return `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+                    <i class="fas fa-exclamation-triangle mr-1"></i> Low (${quantity})
+                </span>`;
+            } else {
+                return `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                    <i class="fas fa-check-circle mr-1"></i> In Stock (${quantity})
+                </span>`;
+            }
+        }
+
+        // Get expiry status badge
+        function getExpiryBadge(expiryDate) {
+            const today = new Date();
+            const expiry = new Date(expiryDate);
+            const daysUntilExpiry = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+
+            const formattedDate = expiry.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+            if (daysUntilExpiry < 0) {
+                return `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                    <i class="fas fa-ban mr-1"></i> Expired
+                </span>`;
+            } else if (daysUntilExpiry <= 60) {
+                return `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+                    <i class="fas fa-clock mr-1"></i> ${daysUntilExpiry} days
+                </span>`;
+            } else {
+                return `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                    <i class="fas fa-calendar-check mr-1"></i> ${formattedDate}
+                </span>`;
+            }
+        }
+
+        // Update statistics
+        function updateStatistics(medicines) {
+            const totalMedicines = medicines.length;
+            const lowStockMedicines = medicines.filter(m => m.stock_quantity > 0 && m.stock_quantity <= m.reorder_threshold);
+            const outOfStockMedicines = medicines.filter(m => m.stock_quantity === 0);
+
+            // Only update elements that exist in the DOM
+            const totalMedicinesEl = document.getElementById('totalMedicines');
+            const lowStockCountEl = document.getElementById('lowStockCount');
+            const outOfStockCountEl = document.getElementById('outOfStockCount');
+            const lowStockNamesEl = document.getElementById('lowStockNames');
+            const outOfStockNamesEl = document.getElementById('outOfStockNames');
+
+            if (totalMedicinesEl) totalMedicinesEl.textContent = totalMedicines;
+            if (lowStockCountEl) lowStockCountEl.textContent = lowStockMedicines.length;
+            if (outOfStockCountEl) outOfStockCountEl.textContent = outOfStockMedicines.length;
+
+            // Show names for low stock and out of stock
+            if (lowStockMedicines.length > 0 && lowStockNamesEl) {
+                const names = lowStockMedicines.map(m => m.brand_name).join(', ');
+                lowStockNamesEl.textContent = names;
+            }
+
+            if (outOfStockMedicines.length > 0 && outOfStockNamesEl) {
+                const names = outOfStockMedicines.map(m => m.brand_name).join(', ');
+                outOfStockNamesEl.textContent = names;
+            }
+        }
+
+        // Fetch patients
+        async function fetchPatients() {
+            patientsLoading.classList.remove('hidden');
+            patientsEmpty.classList.add('hidden');
+            try {
+                const response = await fetch(`${API_BASE}/patients`);
+                const result = await response.json();
+
+                if (result.success) {
+                    allPatients = result.data;
+                    displayPatients(allPatients);
+                }
+            } catch (error) {
+                console.error('Error fetching patients:', error);
+                showToast('Failed to load patients', 'error');
+            }
+            patientsLoading.classList.add('hidden');
+        }
+
+        // Search patients
+        async function searchPatientsData(query) {
+            if (!query.trim()) {
+                displayPatients(allPatients);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/patients?search=${encodeURIComponent(query)}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    displayPatients(result.data);
+                }
+            } catch (error) {
+                console.error('Error searching patients:', error);
+            }
+        }
+
+        // Display patients
+        function displayPatients(patients) {
+            patientsTableBody.innerHTML = '';
+
+            if (patients.length === 0) {
+                patientsEmpty.classList.remove('hidden');
+                return;
+            }
+
+            patientsEmpty.classList.add('hidden');
+
+            patients.forEach(patient => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50 transition';
+                row.innerHTML = `
+                    <td class="px-6 py-4"><div class="font-semibold text-gray-800">${patient.full_name}</div></td>
+                    <td class="px-6 py-4 text-gray-600">${patient.contact_number}</td>
+                    <td class="px-6 py-4 text-gray-600">${patient.email || '-'}</td>
+                    <td class="px-6 py-4 text-gray-600 text-sm">${patient.address || '-'}</td>
+>>>>>>> 5fde657d03b06579f2974489c2d5e74ac1e1b593
                 `;
             }
         }
