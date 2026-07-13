@@ -12,7 +12,7 @@ const pool = new Pool({
   },
   max: 20, // Maximum number of clients in pool
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 20000, // 20 seconds for Neon cold start
 });
 
 // Test connection on module load

@@ -136,7 +136,7 @@ router.post('/:id/purchase', async (req, res) => {
 
   try {
     const { id } = req.params;
-    const { medicine_id, quantity, cost_price } = req.body;
+    const { medicine_id, quantity, cost_price, quantity_type } = req.body;
 
     if (!medicine_id || !quantity || !cost_price) {
       return res.status(400).json({
@@ -182,16 +182,32 @@ router.post('/:id/purchase', async (req, res) => {
     }
 
     const medicine = medicineResult.rows[0];
+    const unitsPerPackage = parseInt(medicine.units_per_package) || 1;
 
-    // Calculate purchase amount
-    const purchaseAmount = parseFloat((quantity * cost_price).toFixed(2));
-    const newStock = medicine.stock_quantity + parseInt(quantity);
+    // Convert quantity to units if quantity_type is "packages"
+    let unitsToAdd;
+    let purchaseAmount;
+
+    if (quantity_type === 'packages') {
+      // User entered packages (e.g., 10 strips)
+      unitsToAdd = parseInt(quantity) * unitsPerPackage;
+      // cost_price is package price
+      purchaseAmount = parseFloat((quantity * cost_price).toFixed(2));
+    } else {
+      // Default: user entered units (e.g., 100 tablets)
+      unitsToAdd = parseInt(quantity);
+      // cost_price is per unit price
+      purchaseAmount = parseFloat((quantity * cost_price).toFixed(2));
+    }
+
+    const newStock = parseInt(medicine.stock_quantity) + unitsToAdd;
+    const newTotalPackages = Math.floor(newStock / unitsPerPackage);
     const newLedgerBalance = parseFloat((parseFloat(supplier.ledger_balance) + purchaseAmount).toFixed(2));
 
-    // Update medicine stock
+    // Update medicine stock and package count
     await client.query(
-      'UPDATE medicines SET stock_quantity = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      [newStock, medicine_id]
+      'UPDATE medicines SET stock_quantity = $1, total_packages = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+      [newStock, newTotalPackages, medicine_id]
     );
 
     // Update supplier ledger
@@ -209,9 +225,12 @@ router.post('/:id/purchase', async (req, res) => {
       data: {
         medicine_id,
         quantity: parseInt(quantity),
+        quantity_type: quantity_type || 'units',
+        units_added: unitsToAdd,
         cost_price: parseFloat(cost_price),
         total_amount: purchaseAmount,
         new_stock: newStock,
+        new_total_packages: newTotalPackages,
         new_ledger_balance: newLedgerBalance
       }
     });

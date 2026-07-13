@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Pharmacy Management System</title>
+
+    <!-- Prevent Browser Caching - Security -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        .shake {
+            animation: shake 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen flex items-center justify-center p-4">
+    <!-- Login Container -->
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden fade-in">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 p-8 text-center">
+            <div class="bg-white rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                <i class="fas fa-capsules text-4xl text-indigo-600"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-white mb-2">Pharmacy System</h1>
+            <p class="text-indigo-100 text-sm">Management & Billing Solution</p>
+        </div>
+
+        <!-- Login Form -->
+        <div class="p-8">
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-2 text-sm">
+                        <i class="fas fa-user mr-2 text-indigo-600"></i>Username
+                    </label>
+                    <input
+                        type="text"
+                        id="username"
+                        required
+                        autocomplete="username"
+                        class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition"
+                        placeholder="Enter your username">
+                </div>
+
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-2 text-sm">
+                        <i class="fas fa-lock mr-2 text-indigo-600"></i>Password
+                    </label>
+                    <div class="relative">
+                        <input
+                            type="password"
+                            id="password"
+                            required
+                            autocomplete="current-password"
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition pr-12"
+                            placeholder="Enter your password">
+                        <button
+                            type="button"
+                            id="togglePassword"
+                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-indigo-600">
+                            <i class="fas fa-eye" id="eyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button
+                    type="submit"
+                    id="loginBtn"
+                    class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 rounded-lg transition duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
+                    <span id="loginBtnText">
+                        <i class="fas fa-sign-in-alt mr-2"></i>Sign In
+                    </span>
+                    <span id="loginBtnLoading" class="hidden">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>Signing in...
+                    </span>
+                </button>
+            </form>
+
+            <!-- Error Message -->
+            <div id="errorMessage" class="hidden mt-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-circle text-red-500 mr-3"></i>
+                    <p class="text-red-700 text-sm font-semibold" id="errorText"></p>
+                </div>
+            </div>
+
+            <!-- Info -->
+            <div class="mt-6 text-center">
+                <p class="text-gray-500 text-xs">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Contact admin for password reset
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-gray-50 px-8 py-4 text-center border-t">
+            <p class="text-xs text-gray-500">
+                <i class="fas fa-shield-alt mr-1 text-green-500"></i>
+                Secure Login • All rights reserved
+            </p>
+        </div>
+    </div>
+
+    <script>
+        console.log('🔐 Login page loaded');
+
+        // API Base URL
+        const API_BASE = 'http://localhost:3000/api';
+        console.log('📡 API Base URL:', API_BASE);
+
+        // Toggle password visibility
+        document.getElementById('togglePassword').addEventListener('click', function() {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.classList.remove('fa-eye');
+                eyeIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.classList.remove('fa-eye-slash');
+                eyeIcon.classList.add('fa-eye');
+            }
+        });
+
+        // Show error message
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            const loginForm = document.querySelector('.bg-white');
+
+            errorText.textContent = message;
+            errorDiv.classList.remove('hidden');
+            loginForm.classList.add('shake');
+
+            setTimeout(() => {
+                loginForm.classList.remove('shake');
+            }, 300);
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                errorDiv.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Hide error message
+        function hideError() {
+            document.getElementById('errorMessage').classList.add('hidden');
+        }
+
+        // Handle login form submission
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideError();
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            console.log('🔑 Attempting login for username:', username);
+
+            if (!username || !password) {
+                showError('Please enter both username and password');
+                return;
+            }
+
+            // Show loading state
+            const loginBtn = document.getElementById('loginBtn');
+            const loginBtnText = document.getElementById('loginBtnText');
+            const loginBtnLoading = document.getElementById('loginBtnLoading');
+
+            loginBtn.disabled = true;
+            loginBtnText.classList.add('hidden');
+            loginBtnLoading.classList.remove('hidden');
+
+            try {
+                console.log('📤 Sending login request to:', `${API_BASE}/auth/login`);
+
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include', // CRITICAL: Include cookies
+                    body: JSON.stringify({ username, password })
+                });
+
+                console.log('📥 Response status:', response.status);
+
+                const data = await response.json();
+                console.log('📦 Response data:', data);
+
+                if (data.success) {
+                    console.log('✅ Login successful!');
+                    console.log('👤 User:', data.user);
+
+                    // Store user info in sessionStorage
+                    sessionStorage.setItem('user', JSON.stringify(data.user));
+                    sessionStorage.setItem('authenticated', 'true');
+
+                    // Success animation
+                    loginBtn.classList.remove('from-indigo-600', 'to-purple-600');
+                    loginBtn.classList.add('from-green-500', 'to-green-600');
+                    loginBtnLoading.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Login Successful!';
+
+                    // Redirect to welcome screen with user info (use replace to prevent back button)
+                    console.log('🚀 Redirecting to welcome screen...');
+
+                    setTimeout(() => {
+                        const welcomeUrl = `/welcome.html?name=${encodeURIComponent(data.user.fullName || data.user.username)}&role=${encodeURIComponent(data.user.role)}`;
+                        console.log('🎯 Welcome URL:', welcomeUrl);
+                        window.location.replace(welcomeUrl); // Use replace instead of href
+                    }, 800);
+                } else {
+                    console.error('❌ Login failed:', data.error);
+                    showError(data.error || 'Invalid username or password');
+
+                    // Reset button state
+                    loginBtn.disabled = false;
+                    loginBtnText.classList.remove('hidden');
+                    loginBtnLoading.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('❌ Login error:', error);
+                console.error('Error details:', error.message);
+                showError('Connection error. Please check if the server is running on port 3000.');
+
+                // Reset button state
+                loginBtn.disabled = false;
+                loginBtnText.classList.remove('hidden');
+                loginBtnLoading.classList.add('hidden');
+            }
+        });
+
+        // Check if already logged in
+        window.addEventListener('DOMContentLoaded', async () => {
+            console.log('🔍 Checking if already authenticated...');
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/session`, {
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                console.log('🔐 Session check result:', data);
+
+                if (data.success) {
+                    console.log('✅ Already logged in - redirecting to dashboard');
+                    // Already logged in - redirect to dashboard (use replace to prevent back button)
+                    window.location.replace('/index.html');
+                } else {
+                    console.log('ℹ️ Not logged in - showing login page');
+                }
+            } catch (error) {
+                // Not logged in - stay on login page
+                console.log('ℹ️ Not authenticated:', error.message);
+            }
+        });
+
+        // Auto-focus username field
+        document.getElementById('username').focus();
+
+        // Enter key on password field submits form
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+            }
+        });
+    </script>
+</body>
+</html>

@@ -7,12 +7,14 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const session = require('express-session');
 
 // Import database connection pool
 const { pool } = require('./services/db');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
+const { requireAdmin, requireBillingAccess, requireStockAccess } = require('./middleware/auth');
 
 const medicineRoutes = require('./routes/medicines');
 const patientRoutes = require('./routes/patients');
@@ -25,9 +27,28 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors()); // Enable CORS for frontend access
+// CORS configuration - MUST allow credentials for session cookies
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'], // Allow both localhost and 127.0.0.1
+  credentials: true, // Allow cookies/session
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Session middleware - MUST come before routes
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'pharmacy_secret_key_2024',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: false, // Set to true in production with HTTPS
+    httpOnly: true,
+    maxAge: 3600000, // 1 hour
+    sameSite: 'lax' // Allow cookie to be sent with redirects
+  }
+}));
 
 // Serve static files from public directory
 app.use(express.static('public'));
@@ -194,24 +215,53 @@ app.get('/api/docs', (req, res) => {
   });
 });
 
-// Mount medicine routes
-app.use('/api/medicines', medicineRoutes);
+// =============================================
+// TEST ENDPOINT
+// =============================================
+app.get('/api/test', (req, res) => {
+  res.json({ success: true, message: 'Test endpoint working!' });
+});
+
+// =============================================
+// AUTHENTICATION ROUTES (Public)
+// =============================================
+
+const authRoutes = require('./routes/auth');
+app.use('/api/auth', authRoutes);
+console.log('✅ Authentication routes mounted at /api/auth');
+
+// =============================================
+// USER MANAGEMENT ROUTES (Admin Only)
+// =============================================
+
+const userRoutes = require('./routes/users');
+app.use('/api/users', userRoutes);
+console.log('✅ User management routes mounted at /api/users');
+
+// =============================================
+// PROTECTED ROUTES (Role-Based Access)
+// =============================================
+
+// Mount medicine routes (Stock users and Admin)
+app.use('/api/medicines', requireStockAccess, medicineRoutes);
 
 // Mount patient routes
 app.use('/api/patients', patientRoutes);
 
-// T023: Mount billing routes
+// T023: Mount billing routes (Billing users and Admin)
 const billingRoutes = require('./routes/billing');
-app.use('/api/billing', billingRoutes);
+app.use('/api/billing', requireBillingAccess, billingRoutes);
+console.log('✅ Billing routes mounted at /api/billing (Billing/Admin access)');
 
-// Mount analytics routes
+// Mount analytics routes (Admin only)
 const analyticsRoutes = require('./routes/analytics');
-app.use('/api/analytics', analyticsRoutes);
-console.log('✅ Analytics routes mounted at /api/analytics');
+app.use('/api/analytics', requireAdmin, analyticsRoutes);
+console.log('✅ Analytics routes mounted at /api/analytics (Admin access)');
 
-// T048: Mount supplier routes
+// T048: Mount supplier routes (Stock users and Admin)
 const supplierRoutes = require('./routes/suppliers');
-app.use('/api/suppliers', supplierRoutes);
+app.use('/api/suppliers', requireStockAccess, supplierRoutes);
+console.log('✅ Supplier routes mounted at /api/suppliers (Stock/Admin access)');
 
 // 404 handler
 app.use((req, res) => {

@@ -1,65 +1,92 @@
-// Authentication Middleware
-// JWT token verification and role-based access control
+// Authentication & Authorization Middleware
+// Session-based authentication and role-based access control
 
-const jwt = require('jsonwebtoken');
-
-// Verify JWT token and attach user to request
-function requireAuth(req, res, next) {
-  try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-        message: 'No valid authentication token provided'
-      });
-    }
-
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Attach user info to request
-    req.user = decoded;
-    next();
-  } catch (error) {
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        error: 'Token expired',
-        message: 'Your session has expired. Please login again.'
-      });
-    }
-
+/**
+ * Middleware to check if user is authenticated
+ * Use this for routes that require any logged-in user
+ */
+const requireAuth = (req, res, next) => {
+  if (!req.session.user) {
     return res.status(401).json({
       success: false,
-      error: 'Invalid token',
-      message: 'Authentication token is invalid'
+      error: 'Authentication required. Please login.'
     });
   }
-}
+  next();
+};
 
-// Require specific role(s)
-function requireRole(roles) {
+/**
+ * Middleware to check if user is Admin
+ * Use this for admin-only routes
+ */
+const requireAdmin = (req, res, next) => {
+  if (!req.session.user) {
+    return res.status(401).json({
+      success: false,
+      error: 'Authentication required'
+    });
+  }
+
+  if (req.session.user.role !== 'Admin') {
+    return res.status(403).json({
+      success: false,
+      error: 'Admin access required. Your role does not have permission.'
+    });
+  }
+
+  next();
+};
+
+/**
+ * Middleware to check if user has specific role
+ * Usage: requireRole('Admin', 'Billing')
+ */
+const requireRole = (...allowedRoles) => {
   return (req, res, next) => {
-    if (!req.user) {
+    if (!req.session.user) {
       return res.status(401).json({
         success: false,
-        error: 'Authentication required',
-        message: 'You must be logged in to access this resource'
+        error: 'Authentication required'
       });
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!allowedRoles.includes(req.session.user.role)) {
       return res.status(403).json({
         success: false,
-        error: 'Forbidden',
-        message: 'You do not have permission to access this resource'
+        error: `Access denied. Required role: ${allowedRoles.join(' or ')}. Your role: ${req.session.user.role}`
       });
     }
 
     next();
   };
-}
+};
 
-module.exports = { requireAuth, requireRole };
+/**
+ * Middleware to check if user is Billing user or Admin
+ */
+const requireBillingAccess = requireRole('Admin', 'Billing');
+
+/**
+ * Middleware to check if user is Stock user or Admin
+ */
+const requireStockAccess = requireRole('Admin', 'Stock');
+
+/**
+ * Middleware to log all authenticated requests
+ */
+const logAuthenticatedRequest = (req, res, next) => {
+  if (req.session.user) {
+    console.log(`[${new Date().toISOString()}] ${req.session.user.role} - ${req.session.user.username} - ${req.method} ${req.path}`);
+  }
+  next();
+};
+
+module.exports = {
+  requireAuth,
+  requireAdmin,
+  requireRole,
+  requireBillingAccess,
+  requireStockAccess,
+  logAuthenticatedRequest
+};
+

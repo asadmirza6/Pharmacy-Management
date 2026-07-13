@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page - Click Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">🧪 Click Test Page</h1>
+
+        <div class="space-y-4">
+            <button id="testBtn1" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold">
+                Test Button 1 - Click Me!
+            </button>
+
+            <button id="testBtn2" class="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold">
+                Test Button 2 - Click Me!
+            </button>
+
+            <button id="testBtn3" class="w-full bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold">
+                Test Button 3 - Click Me!
+            </button>
+
+            <div id="result" class="mt-6 p-4 bg-gray-50 rounded-lg hidden">
+                <h3 class="font-bold text-lg mb-2">Test Results:</h3>
+                <ul id="resultList" class="space-y-2"></ul>
+            </div>
+        </div>
+
+        <div class="mt-8 p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
+            <h3 class="font-bold text-yellow-800 mb-2">Instructions:</h3>
+            <ol class="list-decimal list-inside space-y-1 text-yellow-800">
+                <li>Click all three buttons above</li>
+                <li>Each button click should show a message below</li>
+                <li>If buttons work here, main page mein bhi kaam karenge</li>
+                <li>If not working, JavaScript disabled hai ya browser issue hai</li>
+            </ol>
+        </div>
+
+        <a href="/" class="mt-6 inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold">
+            ← Back to Main App
+        </a>
+    </div>
+
+    <script>
+        console.log('✅ Test page JavaScript loaded');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('✅ DOMContentLoaded fired');
+
+            const resultDiv = document.getElementById('result');
+            const resultList = document.getElementById('resultList');
+
+            function addResult(message) {
+                resultDiv.classList.remove('hidden');
+                const li = document.createElement('li');
+                li.className = 'text-green-600 font-semibold';
+                li.innerHTML = `✅ ${message}`;
+                resultList.appendChild(li);
+                console.log(`✅ ${message}`);
+            }
+
+            document.getElementById('testBtn1').addEventListener('click', () => {
+                addResult('Button 1 clicked successfully!');
+                alert('Button 1 working! ✅');
+            });
+
+            document.getElementById('testBtn2').addEventListener('click', () => {
+                addResult('Button 2 clicked successfully!');
+                alert('Button 2 working! ✅');
+            });
+
+            document.getElementById('testBtn3').addEventListener('click', () => {
+                addResult('Button 3 clicked successfully!');
+                alert('Button 3 working! ✅');
+            });
+
+            console.log('✅ All event listeners attached');
+            addResult('Page loaded successfully! Event listeners are working.');
+        });
+    </script>
+</body>
+</html>

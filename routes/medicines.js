@@ -28,14 +28,29 @@ router.get('/', async (req, res) => {
 
     const result = await pool.query(query, params);
 
-    // Convert numeric fields from strings to numbers
-    const medicines = result.rows.map(med => ({
-      ...med,
-      cost_price: parseFloat(med.cost_price),
-      selling_price: parseFloat(med.selling_price),
-      stock_quantity: parseInt(med.stock_quantity),
-      reorder_threshold: parseInt(med.reorder_threshold)
-    }));
+    // Convert numeric fields from strings to numbers and add package info
+    const medicines = result.rows.map(med => {
+      const unitsPerPackage = parseInt(med.units_per_package) || 1;
+      const stockQuantity = parseInt(med.stock_quantity);
+      const totalPackages = Math.floor(stockQuantity / unitsPerPackage);
+      const looseUnits = stockQuantity % unitsPerPackage;
+
+      return {
+        ...med,
+        cost_price: parseFloat(med.cost_price),
+        selling_price: parseFloat(med.selling_price),
+        package_cost_price: med.package_cost_price ? parseFloat(med.package_cost_price) : null,
+        package_selling_price: med.package_selling_price ? parseFloat(med.package_selling_price) : null,
+        stock_quantity: stockQuantity,
+        reorder_threshold: parseInt(med.reorder_threshold),
+        units_per_package: unitsPerPackage,
+        total_packages: totalPackages,
+        loose_units: looseUnits,
+        display_stock: looseUnits > 0
+          ? `${stockQuantity} units (${totalPackages} ${med.package_type}${totalPackages !== 1 ? 's' : ''} + ${looseUnits} loose)`
+          : `${stockQuantity} units (${totalPackages} ${med.package_type}${totalPackages !== 1 ? 's' : ''})`
+      };
+    });
 
     res.status(200).json({
       success: true,
@@ -271,7 +286,12 @@ router.post('/', async (req, res) => {
       stock_quantity,
       reorder_threshold,
       supplier_id,
-      supplier_name
+      supplier_name,
+      // Package fields
+      package_type,
+      units_per_package,
+      package_cost_price,
+      package_selling_price
     } = req.body;
 
     // Validation
@@ -283,12 +303,25 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Calculate unit prices from package prices if provided
+    const unitsPerPkg = parseInt(units_per_package) || 1;
+    const pkgCostPrice = package_cost_price ? parseFloat(package_cost_price) : null;
+    const pkgSellingPrice = package_selling_price ? parseFloat(package_selling_price) : null;
+
+    const finalCostPrice = pkgCostPrice ? (pkgCostPrice / unitsPerPkg) : parseFloat(cost_price);
+    const finalSellingPrice = pkgSellingPrice ? (pkgSellingPrice / unitsPerPkg) : parseFloat(selling_price);
+
+    const stockQty = parseInt(stock_quantity);
+    const totalPackages = Math.floor(stockQty / unitsPerPkg);
+
     const insertQuery = `
       INSERT INTO medicines (
         brand_name, generic_name, batch_number, manufacturing_date,
         expiry_date, cost_price, selling_price, stock_quantity,
-        reorder_threshold, supplier_id, supplier_name
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        reorder_threshold, supplier_id, supplier_name,
+        package_type, units_per_package, package_cost_price,
+        package_selling_price, total_packages
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *
     `;
 
@@ -298,12 +331,17 @@ router.post('/', async (req, res) => {
       batch_number,
       manufacturing_date,
       expiry_date,
-      parseFloat(cost_price),
-      parseFloat(selling_price),
-      parseInt(stock_quantity),
+      finalCostPrice,
+      finalSellingPrice,
+      stockQty,
       parseInt(reorder_threshold),
       supplier_id,
-      supplier_name
+      supplier_name,
+      package_type || 'piece',
+      unitsPerPkg,
+      pkgCostPrice,
+      pkgSellingPrice,
+      totalPackages
     ];
 
     const result = await pool.query(insertQuery, values);
@@ -316,8 +354,12 @@ router.post('/', async (req, res) => {
         ...medicine,
         cost_price: parseFloat(medicine.cost_price),
         selling_price: parseFloat(medicine.selling_price),
+        package_cost_price: medicine.package_cost_price ? parseFloat(medicine.package_cost_price) : null,
+        package_selling_price: medicine.package_selling_price ? parseFloat(medicine.package_selling_price) : null,
         stock_quantity: parseInt(medicine.stock_quantity),
-        reorder_threshold: parseInt(medicine.reorder_threshold)
+        reorder_threshold: parseInt(medicine.reorder_threshold),
+        units_per_package: parseInt(medicine.units_per_package),
+        total_packages: parseInt(medicine.total_packages)
       }
     });
   } catch (error) {

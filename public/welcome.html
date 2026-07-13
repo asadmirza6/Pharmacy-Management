@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - Pharmacy System</title>
+
+    <!-- Prevent Browser Caching - Security -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+        .slide-up {
+            animation: slideUp 0.8s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-900 via-purple-800 to-pink-700 min-h-screen flex items-center justify-center p-4">
+    <!-- Welcome Screen -->
+    <div class="text-center fade-in">
+        <!-- Logo -->
+        <div class="bg-white rounded-full w-32 h-32 mx-auto mb-8 flex items-center justify-center shadow-2xl">
+            <i class="fas fa-capsules text-6xl text-indigo-600"></i>
+        </div>
+
+        <!-- Welcome Message -->
+        <h1 class="text-5xl font-bold text-white mb-4 slide-up">Welcome Back!</h1>
+        <p class="text-xl text-indigo-100 mb-2" id="userName">Loading...</p>
+        <p class="text-lg text-indigo-200 mb-8" id="userRole">...</p>
+
+        <!-- Loading Animation -->
+        <div class="flex items-center justify-center space-x-3 mb-8">
+            <div class="w-4 h-4 bg-white rounded-full animate-bounce" style="animation-delay: 0s"></div>
+            <div class="w-4 h-4 bg-white rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+            <div class="w-4 h-4 bg-white rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+        </div>
+
+        <!-- Info -->
+        <p class="text-indigo-200 text-sm">
+            <i class="fas fa-check-circle text-green-400 mr-2"></i>
+            Redirecting to your dashboard...
+        </p>
+    </div>
+
+    <script>
+        // Get user info from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const userName = urlParams.get('name') || 'User';
+        const userRole = urlParams.get('role') || 'User';
+
+        // Display user info
+        document.getElementById('userName').textContent = userName;
+        document.getElementById('userRole').textContent = `${userRole} Access`;
+
+        // Redirect to dashboard after 2.5 seconds (use replace to prevent back button)
+        setTimeout(() => {
+            const redirectUrl = urlParams.get('redirect') || '/index.html';
+            window.location.replace(redirectUrl);
+        }, 2500);
+    </script>
+</body>
+</html>
