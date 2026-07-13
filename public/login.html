@@ -121,8 +121,13 @@
     <script>
         console.log('🔐 Login page loaded');
 
-        // API Base URL
-        const API_BASE = 'http://localhost:3000/api';
+        // API Base URL - Environment Aware
+        // Automatically detect if running locally or on production
+        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:3000/api'  // Local development
+            : '/api';  // Production - uses same domain
+
+        console.log('📡 Environment:', window.location.hostname);
         console.log('📡 API Base URL:', API_BASE);
 
         // Toggle password visibility

@@ -727,10 +727,15 @@
 
     <script>
         // =============================================
-        // GLOBAL API BASE URL - MUST MATCH LOGIN PAGE
+        // GLOBAL API BASE URL - Environment Aware
         // =============================================
-        const API_BASE = 'http://localhost:3000/api';
-        console.log('🌐 Global API Base URL:', API_BASE);
+        // Automatically detect if running locally or on production
+        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:3000/api'  // Local development
+            : '/api';  // Production - uses same domain
+
+        console.log('🌐 Environment:', window.location.hostname);
+        console.log('🌐 API Base URL:', API_BASE);
 
         // =============================================
         // AUTHENTICATION CHECK - MUST BE FIRST
