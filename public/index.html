@@ -12,6 +12,7 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -45,6 +46,54 @@
         .tab-scroll {
             -ms-overflow-style: none;
             scrollbar-width: none;
+        }
+
+        /* Toggle Switch Styles */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+        }
+        input:checked + .slider {
+            background-color: #10b981;
+        }
+        input:focus + .slider {
+            box-shadow: 0 0 1px #10b981;
+        }
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+        .slider.round {
+            border-radius: 24px;
+        }
+        .slider.round:before {
+            border-radius: 50%;
         }
 
         /* Thermal Print Styles - Strict 80mm Continuous Roll Layout */
@@ -442,6 +491,19 @@
                                     <span id="receiptGrandTotal" class="text-green-600 font-mono">Rs 0.00</span>
                                 </div>
                             </div>
+
+                            <!-- Processed By Information (Visible in Print) -->
+                            <div class="mt-4 pt-3 border-t border-gray-200">
+                                <div class="text-sm text-gray-600">
+                                    <p class="flex items-center">
+                                        <i class="fas fa-user-check mr-2 text-indigo-600"></i>
+                                        <span class="font-semibold">Processed By:</span>
+                                        <span id="receiptProcessedBy" class="ml-2 text-indigo-700 font-bold">System</span>
+                                    </p>
+                                    <p class="text-xs text-gray-500 mt-1" id="receiptDateTime2"></p>
+                                </div>
+                            </div>
+
                             <div class="mt-6 pt-4 border-t border-gray-200 space-y-3">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <input type="text" id="customerName" placeholder="Customer Name (Optional)" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
@@ -587,12 +649,30 @@
     </div>
 
         <div id="analyticsSection" class="hidden">
+            <!-- Refresh Button -->
+            <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas fa-info-circle text-yellow-600 text-xl mr-3"></i>
+                        <div>
+                            <p class="font-semibold text-yellow-800">Analytics Data</p>
+                            <p class="text-sm text-yellow-700">If data doesn't appear, click the refresh button</p>
+                        </div>
+                    </div>
+                    <button onclick="forceLoadAnalytics()"
+                            class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-semibold transition flex items-center space-x-2">
+                        <i class="fas fa-sync-alt"></i>
+                        <span>Refresh Data</span>
+                    </button>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-gray-500 text-sm font-semibold uppercase mb-1">Total Revenue</p>
-                            <p id="analyticsTotalRevenue" class="text-4xl font-bold text-gray-800">$0.00</p>
+                            <p id="analyticsTotalRevenue" class="text-4xl font-bold text-gray-800">Rs 0.00</p>
                         </div>
                         <div class="bg-green-100 p-4 rounded-full"><i class="fas fa-dollar-sign text-3xl text-green-600"></i></div>
                     </div>
@@ -610,7 +690,7 @@
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-gray-500 text-sm font-semibold uppercase mb-1">Avg Transaction</p>
-                            <p id="analyticsAvgTransaction" class="text-4xl font-bold text-gray-800">$0.00</p>
+                            <p id="analyticsAvgTransaction" class="text-4xl font-bold text-gray-800">Rs 0.00</p>
                         </div>
                         <div class="bg-purple-100 p-4 rounded-full"><i class="fas fa-calculator text-3xl text-purple-600"></i></div>
                     </div>
@@ -619,14 +699,105 @@
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-gray-500 text-sm font-semibold uppercase mb-1">Sales Velocity</p>
-                            <p id="analyticsSalesVelocity" class="text-3xl font-bold text-gray-800">0/hr</p>
+                            <p id="analyticsSalesVelocity" class="text-3xl font-bold text-gray-800">0/day</p>
                         </div>
                         <div class="bg-indigo-100 p-4 rounded-full"><i class="fas fa-tachometer-alt text-3xl text-indigo-600"></i></div>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <!-- Sales Chart -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center space-x-2">
+                        <i class="fas fa-chart-line text-indigo-600"></i>
+                        <span>Sales Over Time</span>
+                    </h2>
+                    <select id="chartPeriodSelect" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option value="daily">Last 30 Days</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
+                </div>
+                <div class="relative" style="height: 300px;">
+                    <canvas id="salesChart"></canvas>
+                </div>
+                <div id="chartEmptyState" class="text-center py-12 hidden">
+                    <i class="fas fa-chart-line text-6xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 text-lg">No sales data recorded yet</p>
+                </div>
+            </div>
+
+            <!-- Date-Based Transaction History -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center space-x-2">
+                        <i class="fas fa-calendar-alt text-indigo-600"></i>
+                        <span>Transaction History by Date</span>
+                    </h2>
+                    <div class="flex items-center space-x-3">
+                        <label for="transactionDateInput" class="text-sm font-semibold text-gray-700">Select Date:</label>
+                        <input type="date" id="transactionDateInput"
+                               class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <button id="filterTransactionsBtn"
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold transition flex items-center space-x-2">
+                            <i class="fas fa-filter"></i>
+                            <span>Filter</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Date Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border-l-4 border-green-500">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600 font-semibold mb-1">Total Sales</p>
+                                <p id="dateTotalSales" class="text-3xl font-bold text-green-700">Rs 0.00</p>
+                                <p id="dateLabel" class="text-xs text-gray-500 mt-1">for today</p>
+                            </div>
+                            <div class="bg-green-200 p-3 rounded-full">
+                                <i class="fas fa-dollar-sign text-2xl text-green-700"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-l-4 border-blue-500">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600 font-semibold mb-1">Total Transactions</p>
+                                <p id="dateTotalTransactions" class="text-3xl font-bold text-blue-700">0</p>
+                                <p id="transactionCountLabel" class="text-xs text-gray-500 mt-1">transactions</p>
+                            </div>
+                            <div class="bg-blue-200 p-3 rounded-full">
+                                <i class="fas fa-receipt text-2xl text-blue-700"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transaction Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b-2 border-gray-200">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Invoice #</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date & Time</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Customer</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Items</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Processed By</th>
+                                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dateTransactionTableBody" class="divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+                <div id="dateTransactionsEmptyState" class="text-center py-12 hidden">
+                    <i class="fas fa-calendar-times text-6xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 text-lg">No transactions found for this date</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
                 <div class="px-6 py-4 bg-gradient-to-r from-indigo-600 to-indigo-700">
                     <h2 class="text-xl font-bold text-white flex items-center space-x-2">
                         <i class="fas fa-history"></i>
@@ -657,11 +828,15 @@
 
         <div id="suppliersSection" class="hidden">
             <div class="bg-white rounded-xl shadow-lg">
-                <div class="px-6 py-4 border-b border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                     <h2 class="text-xl font-bold text-gray-800 flex items-center space-x-2">
                         <i class="fas fa-truck text-indigo-600"></i>
                         <span>Supplier Directory</span>
                     </h2>
+                    <button onclick="openAddSupplierModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center space-x-2 transition">
+                        <i class="fas fa-plus"></i>
+                        <span>Add New Supplier</span>
+                    </button>
                 </div>
                 <div class="p-6">
                     <div id="suppliersLoading" class="text-center py-12 hidden">
@@ -697,8 +872,11 @@
                         <thead class="bg-gray-50 border-b-2 border-gray-200">
                             <tr>
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Medicine Details</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Batch & Package</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Stock & Pricing</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Batch</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Stock</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Reorder Level</th>
+                                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Status (Live)</th>
+                                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Stock Status</th>
                                 <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
                             </tr>
                         </thead>
@@ -943,6 +1121,63 @@
         </div>
     </div>
 
+    <!-- Add Supplier Modal -->
+    <div id="addSupplierModal" class="hidden fixed inset-0 bg-black bg-opacity-50 modal-backdrop z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto fade-in">
+            <div class="sticky top-0 bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex justify-between items-center">
+                <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                    <i class="fas fa-truck"></i>
+                    <span>Add New Supplier</span>
+                </h2>
+                <button onclick="closeAddSupplierModal()" class="text-white hover:text-gray-200 text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="addSupplierForm" class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Supplier Name *</label>
+                        <input type="text" id="supplierName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Phone *</label>
+                        <input type="tel" id="supplierPhone" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Contact Person</label>
+                        <input type="text" id="supplierContactPerson" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                        <input type="email" id="supplierEmail" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Address</label>
+                        <input type="text" id="supplierAddress" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">City</label>
+                        <input type="text" id="supplierCity" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Country</label>
+                        <input type="text" id="supplierCountry" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3 mt-6 pt-4 border-t">
+                    <button type="button" onclick="closeAddSupplierModal()" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold">
+                        <i class="fas fa-check mr-2"></i>Add Supplier
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         // =============================================
         // GLOBAL API BASE URL - Environment Aware
@@ -1108,6 +1343,8 @@
 
         Object.keys(tabs).forEach(tabId => {
             document.getElementById(tabId).addEventListener('click', function() {
+                console.log('🔄 Tab clicked:', tabId);
+
                 // Remove formatting from all tabs
                 Object.keys(tabs).forEach(id => {
                     document.getElementById(id).classList.remove('text-indigo-600', 'border-b-2', 'border-indigo-600');
@@ -1121,60 +1358,496 @@
 
                 // Trigger fresh fetch based on active tab
                 if (tabId === 'billingTab') {
+                    console.log('💰 Loading billing data...');
                     loadMedicinesForBilling();
                     fetchInvoiceHistory();
                 }
-                if (tabId === 'analyticsTab') fetchAnalyticsData();
-                if (tabId === 'suppliersTab') fetchSuppliersData();
-                if (tabId === 'settingsTab') fetchUsers(); // Load users when settings tab opens
-                if (tabId === 'inventoryTab') fetchInventoryLogData();
-                if (tabId === 'alertsTab') fetchSystemAlertsData();
+                if (tabId === 'analyticsTab') {
+                    console.log('📊 Analytics tab activated - forcing data load...');
+                    // Use setTimeout to ensure DOM is ready
+                    setTimeout(() => {
+                        forceLoadAnalytics();
+                    }, 100);
+                }
+                if (tabId === 'suppliersTab') {
+                    console.log('🚚 Loading suppliers...');
+                    fetchSuppliersData();
+                }
+                if (tabId === 'settingsTab') {
+                    console.log('⚙️ Loading settings...');
+                    fetchUsers();
+                }
+                if (tabId === 'inventoryTab') {
+                    console.log('📦 Loading inventory...');
+                    fetchInventoryLogData();
+                }
+                if (tabId === 'alertsTab') {
+                    console.log('🔔 Loading alerts...');
+                    fetchSystemAlertsData();
+                }
             });
         });
 
-        // 1. ANALYTICS DATA FETCHING
-        async function fetchAnalyticsData() {
-            try {
-                const res = await fetch(`${API_BASE}/invoices`, {
-                    credentials: 'include'
-                }); // fallback or specific endpoint
-                const data = await res.json();
-                
-                let totalRevenue = 0;
-                let totalTransactions = 0;
-                let tableHtml = '';
+        // 1. ANALYTICS DATA FETCHING - PostgreSQL Integration with Charts
+        let salesChart = null;
 
-                const records = data.success ? (data.data || data) : [];
-                if (Array.isArray(records) && records.length > 0) {
-                    totalTransactions = records.length;
-                    records.forEach(inv => {
-                        totalRevenue += parseFloat(inv.total_amount || inv.grand_total || 0);
-                        tableHtml += `
-                            <tr>
-                                <td class="px-6 py-4 font-mono text-sm font-semibold text-indigo-600">${inv.id || inv.invoice_number || 'INV-N/A'}</td>
-                                <td class="px-6 py-4 text-sm text-gray-600">${new Date(inv.created_at || inv.date).toLocaleString()}</td>
-                                <td class="px-6 py-4 text-sm text-gray-800">${inv.customer_name || 'Walk-in Customer'}</td>
-                                <td class="px-6 py-4 text-sm text-gray-600">${inv.items_count || (inv.items ? inv.items.length : 1)} Items</td>
-                                <td class="px-6 py-4 text-sm font-mono font-bold text-gray-900">Rs ${(parseFloat(inv.total_amount || inv.grand_total || 0)).toFixed(2)}</td>
-                                <td class="px-6 py-4 text-sm"><span class="px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full">Paid</span></td>
-                            </tr>
-                        `;
-                    });
-                    document.getElementById('analyticsEmptyState').classList.add('hidden');
+        async function fetchAnalyticsData() {
+            console.log('📊 Fetching analytics data...');
+            try {
+                // Fetch analytics summary
+                const summaryRes = await fetch(`${API_BASE}/analytics/summary`, {
+                    credentials: 'include'
+                });
+
+                console.log('📡 Summary response status:', summaryRes.status);
+
+                if (summaryRes.ok) {
+                    const summaryData = await summaryRes.json();
+                    console.log('📦 Summary data received:', summaryData);
+
+                    if (summaryData.success) {
+                        const data = summaryData.data;
+
+                        // Update analytics cards
+                        document.getElementById('analyticsTotalRevenue').textContent = `Rs ${data.totalRevenue.toFixed(2)}`;
+                        document.getElementById('analyticsTotalTransactions').textContent = data.totalTransactions;
+                        document.getElementById('analyticsAvgTransaction').textContent = `Rs ${data.averageTransactionValue.toFixed(2)}`;
+                        document.getElementById('analyticsSalesVelocity').textContent = `${data.totalTransactions}/total`;
+
+                        console.log('📊 Rendering transaction history with', data.recentInvoices.length, 'invoices');
+                        // Render transaction history table
+                        renderTransactionHistory(data.recentInvoices);
+                    } else {
+                        console.error('❌ Summary data success=false:', summaryData);
+                    }
                 } else {
-                    document.getElementById('analyticsEmptyState').classList.remove('hidden');
+                    console.error('❌ Summary response not OK:', summaryRes.status);
                 }
 
-                document.getElementById('analyticsTotalRevenue').textContent = `Rs ${totalRevenue.toFixed(2)}`;
-                document.getElementById('analyticsTotalTransactions').textContent = totalTransactions;
-                document.getElementById('analyticsAvgTransaction').textContent = `Rs ${totalTransactions > 0 ? (totalRevenue / totalTransactions).toFixed(2) : '0.00'}`;
-                document.getElementById('analyticsSalesVelocity').textContent = `${totalTransactions}/day`;
-                document.getElementById('analyticsTransactionTableBody').innerHTML = tableHtml;
+                // Fetch and render sales chart
+                console.log('📈 Attempting to render sales chart...');
+                await renderSalesChart('daily');
 
             } catch (err) {
-                console.error("Error fetching analytics layout:", err);
+                console.error("❌ Error fetching analytics data:", err);
+                document.getElementById('analyticsEmptyState').classList.remove('hidden');
             }
         }
+
+        // Render Transaction History Table
+        function renderTransactionHistory(invoices) {
+            console.log('🔄 renderTransactionHistory called with:', invoices);
+            const tbody = document.getElementById('analyticsTransactionTableBody');
+            const emptyState = document.getElementById('analyticsEmptyState');
+
+            if (!tbody) {
+                console.error('❌ Transaction table body not found!');
+                return;
+            }
+
+            if (!invoices || invoices.length === 0) {
+                console.log('⚠️ No invoices to display');
+                tbody.innerHTML = '';
+                if (emptyState) emptyState.classList.remove('hidden');
+                return;
+            }
+
+            console.log('✅ Rendering', invoices.length, 'transactions');
+            if (emptyState) emptyState.classList.add('hidden');
+
+            tbody.innerHTML = invoices.map(inv => {
+                console.log('Rendering invoice:', inv);
+                return `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 font-mono text-sm font-semibold text-indigo-600">${inv.invoiceNumber || inv.invoiceId}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600">${new Date(inv.timestamp).toLocaleString()}</td>
+                    <td class="px-6 py-4 text-sm text-gray-800">${inv.customerName}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600">${inv.itemCount} item(s)</td>
+                    <td class="px-6 py-4 text-sm font-mono font-bold text-gray-900">Rs ${parseFloat(inv.totalAmount).toFixed(2)}</td>
+                    <td class="px-6 py-4 text-sm">
+                        <span class="px-2 py-1 text-xs font-semibold ${
+                            inv.paymentStatus === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        } rounded-full">
+                            ${inv.paymentStatus || 'Completed'}
+                        </span>
+                    </td>
+                </tr>
+            `}).join('');
+
+            console.log('✅ Transaction history rendered successfully');
+        }
+
+        // Render Sales Chart
+        async function renderSalesChart(period = 'daily') {
+            console.log('📈 renderSalesChart called with period:', period);
+
+            // Check if Chart.js is loaded
+            if (typeof Chart === 'undefined') {
+                console.error('❌ Chart.js is not loaded! Charts will not work.');
+                document.getElementById('chartEmptyState').classList.remove('hidden');
+                const emptyState = document.getElementById('chartEmptyState');
+                if (emptyState) {
+                    emptyState.innerHTML = `
+                        <i class="fas fa-exclamation-triangle text-6xl text-red-300 mb-4"></i>
+                        <p class="text-red-500 text-lg font-bold">Chart.js library failed to load</p>
+                        <p class="text-gray-500 text-sm mt-2">Please check your internet connection and refresh the page</p>
+                    `;
+                }
+                return;
+            }
+
+            console.log('✅ Chart.js is loaded, version:', Chart.version);
+
+            try {
+                const salesRes = await fetch(`${API_BASE}/analytics/sales-over-time?period=${period}`, {
+                    credentials: 'include'
+                });
+
+                console.log('📡 Sales chart response status:', salesRes.status);
+
+                if (!salesRes.ok) {
+                    console.error('❌ Sales chart response not OK:', salesRes.status);
+                    document.getElementById('chartEmptyState').classList.remove('hidden');
+                    return;
+                }
+
+                const salesData = await salesRes.json();
+                console.log('📦 Sales data received:', salesData);
+
+                if (!salesData.success || !salesData.data || salesData.data.length === 0) {
+                    console.log('⚠️ No sales data available');
+                    document.getElementById('chartEmptyState').classList.remove('hidden');
+                    if (salesChart) {
+                        salesChart.destroy();
+                        salesChart = null;
+                    }
+                    return;
+                }
+
+                console.log('✅ Processing', salesData.data.length, 'data points for chart');
+                document.getElementById('chartEmptyState').classList.add('hidden');
+
+                const labels = salesData.data.map(item => {
+                    if (period === 'daily') {
+                        return new Date(item.period).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    } else if (period === 'monthly') {
+                        return item.period;
+                    }
+                    return item.period;
+                }).reverse();
+
+                const revenues = salesData.data.map(item => parseFloat(item.totalSales)).reverse();
+                const transactions = salesData.data.map(item => parseInt(item.transactionCount)).reverse();
+
+                console.log('📊 Chart labels:', labels);
+                console.log('💰 Chart revenues:', revenues);
+                console.log('📋 Chart transactions:', transactions);
+
+                const ctx = document.getElementById('salesChart');
+                if (!ctx) {
+                    console.error('❌ Canvas element #salesChart not found!');
+                    return;
+                }
+
+                console.log('✅ Canvas element found');
+                const context = ctx.getContext('2d');
+
+                // Destroy existing chart if it exists
+                if (salesChart) {
+                    console.log('🗑️ Destroying existing chart');
+                    salesChart.destroy();
+                }
+
+                // Create new chart
+                console.log('🎨 Creating new chart...');
+                salesChart = new Chart(context, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Revenue (Rs)',
+                                data: revenues,
+                                backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                                borderColor: 'rgba(34, 197, 94, 1)',
+                                borderWidth: 2,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'Transactions',
+                                data: transactions,
+                                type: 'line',
+                                backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                borderColor: 'rgba(59, 130, 246, 1)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.4,
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 15,
+                                    font: {
+                                        size: 12,
+                                        weight: 'bold'
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                padding: 12,
+                                titleFont: {
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                bodyFont: {
+                                    size: 13
+                                },
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.y !== null) {
+                                            if (context.datasetIndex === 0) {
+                                                label += 'Rs ' + context.parsed.y.toFixed(2);
+                                            } else {
+                                                label += context.parsed.y + ' orders';
+                                            }
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                title: {
+                                    display: true,
+                                    text: 'Revenue (Rs)',
+                                    font: {
+                                        size: 12,
+                                        weight: 'bold'
+                                    }
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return 'Rs ' + value.toFixed(0);
+                                    }
+                                }
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                title: {
+                                    display: true,
+                                    text: 'Transactions',
+                                    font: {
+                                        size: 12,
+                                        weight: 'bold'
+                                    }
+                                },
+                                grid: {
+                                    drawOnChartArea: false
+                                }
+                            }
+                        }
+                    }
+                });
+
+                console.log('✅ Chart created successfully');
+
+            } catch (err) {
+                console.error('❌ Error rendering sales chart:', err);
+                document.getElementById('chartEmptyState').classList.remove('hidden');
+            }
+        }
+
+        // Chart period selector change handler
+        document.addEventListener('DOMContentLoaded', () => {
+            const chartPeriodSelect = document.getElementById('chartPeriodSelect');
+            if (chartPeriodSelect) {
+                chartPeriodSelect.addEventListener('change', (e) => {
+                    console.log('📊 Chart period changed to:', e.target.value);
+                    renderSalesChart(e.target.value);
+                });
+            }
+        });
+
+        // DATE-BASED TRANSACTION HISTORY FUNCTIONS
+
+        // Fetch transactions by date
+        async function fetchTransactionsByDate(date) {
+            console.log('📅 fetchTransactionsByDate called with date:', date);
+            try {
+                const url = `${API_BASE}/analytics/transactions?date=${date}`;
+                console.log('📡 Fetching from:', url);
+
+                const response = await fetch(url, {
+                    credentials: 'include'
+                });
+
+                console.log('📡 Response status:', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('📦 Transaction data received:', data);
+
+                if (data.success) {
+                    console.log('✅ Data success! Transactions count:', data.data.length);
+                    console.log('💰 Total sales:', data.summary.totalSales);
+                    console.log('📋 Total transactions:', data.summary.totalTransactions);
+
+                    // Update summary cards
+                    document.getElementById('dateTotalSales').textContent = `Rs ${data.summary.totalSales.toFixed(2)}`;
+                    document.getElementById('dateTotalTransactions').textContent = data.summary.totalTransactions;
+
+                    const formattedDate = new Date(date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                    document.getElementById('dateLabel').textContent = `for ${formattedDate}`;
+                    document.getElementById('transactionCountLabel').textContent =
+                        `${data.summary.totalTransactions} transaction${data.summary.totalTransactions !== 1 ? 's' : ''}`;
+
+                    // Render transactions table
+                    console.log('🔄 Calling renderDateTransactions...');
+                    renderDateTransactions(data.data);
+                } else {
+                    console.error('❌ Data success=false:', data.message);
+                    showNoTransactionsMessage();
+                }
+            } catch (error) {
+                console.error('❌ Error fetching transactions by date:', error);
+                showNoTransactionsMessage();
+            }
+        }
+
+        // Render date transactions table
+        function renderDateTransactions(transactions) {
+            console.log('🔄 renderDateTransactions called with:', transactions);
+            const tbody = document.getElementById('dateTransactionTableBody');
+            const emptyState = document.getElementById('dateTransactionsEmptyState');
+
+            if (!tbody) {
+                console.error('❌ dateTransactionTableBody element not found!');
+                return;
+            }
+
+            if (!transactions || transactions.length === 0) {
+                console.log('⚠️ No transactions to display');
+                tbody.innerHTML = '';
+                if (emptyState) emptyState.classList.remove('hidden');
+                return;
+            }
+
+            console.log('✅ Rendering', transactions.length, 'date-based transactions');
+            if (emptyState) emptyState.classList.add('hidden');
+
+            tbody.innerHTML = transactions.map(txn => {
+                console.log('Rendering transaction:', txn);
+                const itemsList = txn.items.map(item =>
+                    `${item.medicineName} (${item.quantity}x)`
+                ).join(', ');
+
+                return `
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-4 py-3 font-mono text-sm font-semibold text-indigo-600">${txn.invoiceNumber}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600">${new Date(txn.timestamp).toLocaleString()}</td>
+                        <td class="px-4 py-3 text-sm text-gray-800">${txn.customerName}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600">
+                            <span class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-semibold">
+                                <i class="fas fa-pills mr-1"></i>${txn.items.length} item(s)
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-sm font-mono font-bold text-gray-900">Rs ${txn.totalAmount.toFixed(2)}</td>
+                        <td class="px-4 py-3 text-sm">
+                            <span class="inline-flex items-center px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full font-semibold">
+                                <i class="fas fa-user-check mr-1"></i>${txn.processedBy}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <button onclick="viewTransactionDetails('${txn.invoiceId}')"
+                                    class="text-indigo-600 hover:text-indigo-800 font-semibold text-sm">
+                                <i class="fas fa-eye mr-1"></i>View
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            console.log('✅ Date transactions rendered successfully');
+        }
+
+        // Show no transactions message
+        function showNoTransactionsMessage() {
+            document.getElementById('dateTotalSales').textContent = 'Rs 0.00';
+            document.getElementById('dateTotalTransactions').textContent = '0';
+            document.getElementById('dateTransactionTableBody').innerHTML = '';
+            document.getElementById('dateTransactionsEmptyState').classList.remove('hidden');
+        }
+
+        // View transaction details (reuse invoice modal)
+        window.viewTransactionDetails = async function(invoiceId) {
+            await viewInvoiceDetails(invoiceId);
+        };
+
+        // Initialize date input and filter button
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set today's date as default
+            const today = new Date().toISOString().split('T')[0];
+            const dateInput = document.getElementById('transactionDateInput');
+            if (dateInput) {
+                dateInput.value = today;
+                dateInput.max = today; // Prevent future dates
+            }
+
+            // Filter button click handler
+            const filterBtn = document.getElementById('filterTransactionsBtn');
+            if (filterBtn) {
+                filterBtn.addEventListener('click', () => {
+                    const selectedDate = document.getElementById('transactionDateInput').value;
+                    if (selectedDate) {
+                        fetchTransactionsByDate(selectedDate);
+                    } else {
+                        alert('Please select a date');
+                    }
+                });
+            }
+
+            // Also allow Enter key on date input
+            if (dateInput) {
+                dateInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        const selectedDate = dateInput.value;
+                        if (selectedDate) {
+                            fetchTransactionsByDate(selectedDate);
+                        }
+                    }
+                });
+            }
+        });
 
         // 2. SUPPLIERS DATA FETCHING
         async function fetchSuppliersData() {
@@ -1364,6 +2037,48 @@
             }
         };
 
+        // Toggle medicine active/inactive status
+        window.toggleMedicineStatus = function(medicineId, isChecked) {
+            console.log('🔄 Frontend Toggle Called:');
+            console.log('  Medicine ID:', medicineId);
+            console.log('  isChecked:', isChecked);
+            console.log('  isChecked type:', typeof isChecked);
+
+            fetch(`${API_BASE}/inventory/toggle-status?id=${medicineId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ is_live: isChecked })
+            })
+            .then(res => {
+                console.log('  Response status:', res.status);
+                if (!res.ok) {
+                    alert('❌ Failed to update status');
+                    // Revert checkbox on failure
+                    const checkbox = document.querySelector(`input[data-medicine-id="${medicineId}"]`);
+                    if (checkbox) checkbox.checked = !isChecked;
+                }
+                return res.json();
+            })
+            .then(data => {
+                console.log('  Response data:', data);
+                if (data && data.success) {
+                    console.log('✅ Status updated for medicine', medicineId, '→', isChecked);
+                    console.log('  Server returned is_live:', data.data?.is_live);
+                    // Refresh both sections
+                    fetchMedicines(); // Medicine section (shows only is_live=true)
+                    fetchInventoryLogData(); // Inventory section (shows all with toggle)
+                }
+            })
+            .catch(err => {
+                console.error('❌ Error toggling status:', err);
+                alert('❌ Network error while updating status');
+                // Revert checkbox on error
+                const checkbox = document.querySelector(`input[data-medicine-id="${medicineId}"]`);
+                if (checkbox) checkbox.checked = !isChecked;
+            });
+        };
+
         // 3. INVENTORY LOG DATA FETCHING
         async function fetchInventoryLogData() {
             try {
@@ -1386,16 +2101,33 @@
                                 <td class="px-4 py-3 text-sm font-mono text-gray-600">${med.batch_number}</td>
                                 <td class="px-4 py-3 text-sm font-mono font-bold ${isLow ? 'text-red-600' : 'text-gray-800'}">${med.stock_quantity}</td>
                                 <td class="px-4 py-3 text-sm font-mono text-gray-500">${med.reorder_threshold || 10}</td>
+                                <td class="px-4 py-3 text-center">
+                                    <label class="switch">
+                                        <input type="checkbox"
+                                            data-medicine-id="${med.id}"
+                                            ${med.is_live ? 'checked' : ''}
+                                            onchange="toggleMedicineStatus('${med.id}', this.checked)">
+                                        <span class="slider round"></span>
+                                    </label>
+                                </td>
                                 <td class="px-4 py-3 text-sm">
                                     <span class="px-2 py-1 text-xs font-bold rounded-full ${isLow ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">
                                         ${isLow ? 'Reorder Needed' : 'Healthy'}
                                     </span>
                                 </td>
+                                <td class="px-4 py-3 text-center">
+                                    <button onclick="editInventoryItem('${med.id}')" class="text-blue-600 hover:text-blue-800 mx-1" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="deleteInventoryItem('${med.id}', '${med.brand_name.replace(/'/g, "\\'")}')" class="text-red-600 hover:text-red-800 mx-1" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
                             </tr>
                         `;
                     });
                 } else {
-                    logHtml = `<tr><td colspan="5" class="text-center py-6 text-gray-400">Inventory log is currently empty.</td></tr>`;
+                    logHtml = `<tr><td colspan="7" class="text-center py-6 text-gray-400">Inventory log is currently empty.</td></tr>`;
                 }
                 document.getElementById('inventoryLogTableBody').innerHTML = logHtml;
             } catch (err) {
@@ -1501,7 +2233,7 @@
             } catch (err) {
                 console.error('Error fetching medicines:', err);
                 document.getElementById('medicineTableBody').innerHTML = `
-                    <tr><td colspan="8" class="text-center py-6 text-red-500">
+                    <tr><td colspan="9" class="text-center py-6 text-red-500">
                         <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
                         <p>Error loading medicines. Check console.</p>
                     </td></tr>
@@ -1511,18 +2243,22 @@
 
         function renderMedicinesTable(medicines) {
             const tbody = document.getElementById('medicineTableBody');
-            if (!medicines || medicines.length === 0) {
+
+            // Filter: Only show medicines where is_live = true
+            const liveMedicines = medicines.filter(med => med.is_live === true);
+
+            if (!liveMedicines || liveMedicines.length === 0) {
                 tbody.innerHTML = `
                     <tr><td colspan="8" class="text-center py-12 text-gray-400">
                         <i class="fas fa-pills text-5xl mb-3"></i>
-                        <p class="text-lg">No medicines found</p>
-                        <p class="text-sm mt-2">Click "Add Medicine" button to add your first medicine</p>
+                        <p class="text-lg">No live medicines available</p>
+                        <p class="text-sm mt-2">Enable medicines from Inventory section to display them here</p>
                     </td></tr>
                 `;
                 return;
             }
 
-            tbody.innerHTML = medicines.map(med => {
+            tbody.innerHTML = liveMedicines.map(med => {
                 const isLowStock = med.stock_quantity <= med.reorder_threshold;
                 const expiryDate = new Date(med.expiry_date);
                 const today = new Date();
@@ -1663,6 +2399,54 @@
             delete document.getElementById('addMedicineForm').dataset.editId;
             document.querySelector('#addMedicineModal h2 span').textContent = 'Add New Medicine';
         };
+
+        // Supplier Modal Functions
+        window.openAddSupplierModal = function() {
+            document.getElementById('addSupplierModal').classList.remove('hidden');
+        };
+
+        window.closeAddSupplierModal = function() {
+            document.getElementById('addSupplierModal').classList.add('hidden');
+            document.getElementById('addSupplierForm').reset();
+        };
+
+        // Add Supplier Form Submission
+        document.getElementById('addSupplierForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const supplierData = {
+                name: document.getElementById('supplierName').value,
+                phone: document.getElementById('supplierPhone').value,
+                contact_person: document.getElementById('supplierContactPerson').value || null,
+                email: document.getElementById('supplierEmail').value || null,
+                address: document.getElementById('supplierAddress').value || null,
+                city: document.getElementById('supplierCity').value || null,
+                country: document.getElementById('supplierCountry').value || null
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/suppliers`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(supplierData)
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    alert('✅ Supplier added successfully!');
+                    closeAddSupplierModal();
+                    fetchSuppliersData();
+                    loadSuppliers(); // Refresh supplier dropdown in medicine form
+                } else {
+                    alert('❌ Error: ' + (data.message || 'Failed to add supplier'));
+                }
+            } catch (err) {
+                console.error('Add supplier error:', err);
+                alert('❌ Network error while adding supplier');
+            }
+        });
 
         document.getElementById('addBtn').addEventListener('click', openAddMedicineModal);
 
@@ -1941,7 +2725,18 @@
             document.getElementById('receiptGrandTotal').textContent = `Rs ${grandTotal.toFixed(2)}`;
 
             // Update receipt date/time
-            document.getElementById('receiptDateTime').textContent = new Date().toLocaleString();
+            const now = new Date();
+            document.getElementById('receiptDateTime').textContent = now.toLocaleString();
+            const receiptDateTime2 = document.getElementById('receiptDateTime2');
+            if (receiptDateTime2) {
+                receiptDateTime2.textContent = now.toLocaleString();
+            }
+
+            // Update "Processed By" with current user
+            const processedByElement = document.getElementById('receiptProcessedBy');
+            if (processedByElement && window.currentUser) {
+                processedByElement.textContent = window.currentUser.fullName || window.currentUser.username;
+            }
 
             totalsSection.classList.remove('hidden');
         }
@@ -2161,10 +2956,35 @@
             document.getElementById('invoiceDetailsModal').classList.add('hidden');
         };
 
-        // 10. DASHBOARD DATA FETCH
+        // 10. DASHBOARD DATA FETCH - PostgreSQL Integration
         async function fetchDashboardData() {
             try {
-                // Fetch medicines for dashboard stats
+                // Fetch dashboard metrics from PostgreSQL database
+                const dashRes = await fetch(`${API_BASE}/analytics/dashboard`, {
+                    credentials: 'include'
+                });
+
+                if (dashRes.ok) {
+                    const dashData = await dashRes.json();
+
+                    if (dashData.success) {
+                        const data = dashData.data;
+
+                        // Update dashboard cards
+                        document.getElementById('dashRevenue').textContent = `Rs ${data.revenueToday.toFixed(2)}`;
+                        document.getElementById('dashTransactions').textContent = data.transactionsToday;
+                        document.getElementById('dashNearExpiry').textContent = data.nearExpiryCount;
+                        document.getElementById('dashLowStock').textContent = data.lowStockCount;
+
+                        // Update top sellers section
+                        renderTopSellers(data.topSellers);
+
+                        // Update low stock alerts section
+                        renderLowStockAlerts(data.lowStockAlerts);
+                    }
+                }
+
+                // Also fetch medicines for medicine stats
                 const medRes = await fetch(`${API_BASE}/medicines`, {
                     credentials: 'include'
                 });
@@ -2172,26 +2992,103 @@
                 const medicines = medData.success ? (medData.data || medData) : [];
                 updateMedicineStats(medicines);
 
-                // Try to fetch revenue/transactions from analytics
-                try {
-                    const analyticsRes = await fetch(`${API_BASE}/analytics`, {
-                        credentials: 'include'
-                    });
-                    if (analyticsRes.ok) {
-                        const analyticsData = await analyticsRes.json();
-                        if (analyticsData.revenue) {
-                            document.getElementById('dashRevenue').textContent = `Rs ${analyticsData.revenue.toFixed(2)}`;
-                        }
-                        if (analyticsData.transactions) {
-                            document.getElementById('dashTransactions').textContent = analyticsData.transactions;
-                        }
-                    }
-                } catch (e) {
-                    console.log('Analytics endpoint not available');
-                }
             } catch (err) {
                 console.error('Dashboard fetch error:', err);
+                // Show fallback messages
+                document.getElementById('topSellersList').innerHTML = `
+                    <div class="text-center text-red-400 py-8">
+                        <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
+                        <p>Failed to load dashboard data</p>
+                    </div>
+                `;
             }
+        }
+
+        // Render Top Selling Medicines
+        function renderTopSellers(topSellers) {
+            const container = document.getElementById('topSellersList');
+
+            if (!topSellers || topSellers.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-400 py-8">
+                        <i class="fas fa-chart-line text-4xl mb-2"></i>
+                        <p>No sales data yet</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = topSellers.map((item, index) => `
+                <div class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-200 hover:shadow-md transition">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center justify-center w-10 h-10 rounded-full ${
+                            index === 0 ? 'bg-yellow-100 text-yellow-700' :
+                            index === 1 ? 'bg-gray-100 text-gray-700' :
+                            index === 2 ? 'bg-orange-100 text-orange-700' :
+                            'bg-blue-100 text-blue-700'
+                        } font-bold">
+                            ${index + 1}
+                        </div>
+                        <div>
+                            <div class="font-semibold text-gray-900">${item.medicineName}</div>
+                            <div class="text-sm text-gray-500">
+                                <i class="fas fa-box mr-1"></i>${item.quantitySold} units sold
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold text-green-600">Rs ${item.revenue.toFixed(2)}</div>
+                        <div class="text-xs text-gray-500">Total Revenue</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render Low Stock Alerts
+        function renderLowStockAlerts(alerts) {
+            const container = document.getElementById('lowStockAlertsList');
+
+            if (!alerts || alerts.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-400 py-8">
+                        <i class="fas fa-check-circle text-4xl mb-2"></i>
+                        <p>All stock levels healthy</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = alerts.map(alert => {
+                const percentage = (alert.current_stock / alert.reorder_threshold) * 100;
+                const isOutOfStock = alert.current_stock === 0;
+                const isCritical = percentage < 50 && !isOutOfStock;
+
+                return `
+                    <div class="flex items-center justify-between p-3 ${
+                        isOutOfStock ? 'bg-red-50 border-l-4 border-red-600' :
+                        isCritical ? 'bg-orange-50 border-l-4 border-orange-500' :
+                        'bg-yellow-50 border-l-4 border-yellow-500'
+                    } rounded-r-lg">
+                        <div class="flex-1">
+                            <div class="font-semibold text-gray-900">${alert.medicine_name}</div>
+                            <div class="text-sm ${
+                                isOutOfStock ? 'text-red-600 font-bold' :
+                                isCritical ? 'text-orange-600' :
+                                'text-yellow-700'
+                            }">
+                                ${isOutOfStock ? '🚫 OUT OF STOCK' : `⚠️ Current: ${alert.current_stock} units | Threshold: ${alert.reorder_threshold} units`}
+                            </div>
+                        </div>
+                        <div>
+                            <i class="fas fa-exclamation-triangle ${
+                                isOutOfStock ? 'text-red-600' :
+                                isCritical ? 'text-orange-600' :
+                                'text-yellow-600'
+                            } text-2xl"></i>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         // 11. ADMIN SETTINGS - USER MANAGEMENT
@@ -2414,7 +3311,31 @@
             fetchMedicines(); // Load medicines on page load
             loadMedicinesForBilling(); // Load medicines for billing dropdown
             fetchInvoiceHistory(); // Load invoice history
+
+            // Initialize date input to today
+            const todayDate = new Date().toISOString().split('T')[0];
+            const dateInput = document.getElementById('transactionDateInput');
+            if (dateInput) {
+                dateInput.value = todayDate;
+                dateInput.max = todayDate;
+                console.log('✅ Date input initialized to:', todayDate);
+            }
         });
+
+        // FORCE ANALYTICS LOAD - Called when Analytics tab is clicked
+        function forceLoadAnalytics() {
+            console.log('🚀 FORCE LOADING ANALYTICS...');
+
+            // Load all analytics data
+            fetchAnalyticsData();
+
+            // Load today's date-based transactions
+            const today = new Date().toISOString().split('T')[0];
+            console.log('📅 Loading transactions for:', today);
+            fetchTransactionsByDate(today);
+
+            console.log('✅ Analytics force load initiated');
+        }
 
         // Prevent back button after logout - Security Layer
         window.addEventListener('pageshow', function(event) {

@@ -15,14 +15,19 @@ router.get('/', async (req, res) => {
     if (search) {
       query = `
         SELECT * FROM medicines
-        WHERE brand_name ILIKE $1
+        WHERE (is_deleted IS NOT TRUE OR is_deleted IS NULL)
+          AND (brand_name ILIKE $1
            OR generic_name ILIKE $1
-           OR batch_number ILIKE $1
+           OR batch_number ILIKE $1)
         ORDER BY created_at DESC
       `;
       params = [`%${search}%`];
     } else {
-      query = 'SELECT * FROM medicines ORDER BY created_at DESC';
+      query = `
+        SELECT * FROM medicines
+        WHERE (is_deleted IS NOT TRUE OR is_deleted IS NULL)
+        ORDER BY created_at DESC
+      `;
       params = [];
     }
 
@@ -80,6 +85,7 @@ router.get('/statistics', async (req, res) => {
         COUNT(CASE WHEN expiry_date <= CURRENT_DATE + INTERVAL '30 days' THEN 1 END) as near_expiry_count,
         COUNT(CASE WHEN stock_quantity <= reorder_threshold THEN 1 END) as low_stock_count
       FROM medicines
+      WHERE (is_deleted IS NOT TRUE OR is_deleted IS NULL)
     `;
 
     const result = await pool.query(statsQuery);
@@ -112,7 +118,8 @@ router.get('/low-stock', async (req, res) => {
   try {
     const query = `
       SELECT * FROM medicines
-      WHERE stock_quantity <= reorder_threshold
+      WHERE (is_deleted IS NOT TRUE OR is_deleted IS NULL)
+        AND stock_quantity <= reorder_threshold
       ORDER BY stock_quantity ASC
     `;
 
@@ -143,7 +150,8 @@ router.get('/near-expiry', async (req, res) => {
 
     const query = `
       SELECT * FROM medicines
-      WHERE expiry_date <= CURRENT_DATE + INTERVAL '${threshold} days'
+      WHERE (is_deleted IS NOT TRUE OR is_deleted IS NULL)
+        AND expiry_date <= CURRENT_DATE + INTERVAL '${threshold} days'
         AND expiry_date >= CURRENT_DATE
       ORDER BY expiry_date ASC
     `;
@@ -180,7 +188,8 @@ router.get('/alerts', async (req, res) => {
                ELSE 'medium'
              END as severity
       FROM medicines
-      WHERE stock_quantity <= reorder_threshold
+      WHERE (is_deleted IS NOT TRUE OR is_deleted IS NULL)
+        AND stock_quantity <= reorder_threshold
     `;
 
     // Get expiry alerts
@@ -193,7 +202,8 @@ router.get('/alerts', async (req, res) => {
                ELSE 'medium'
              END as severity
       FROM medicines
-      WHERE expiry_date <= CURRENT_DATE + INTERVAL '60 days'
+      WHERE (is_deleted IS NOT TRUE OR is_deleted IS NULL)
+        AND expiry_date <= CURRENT_DATE + INTERVAL '60 days'
     `;
 
     const [lowStock, expiry] = await Promise.all([
@@ -238,7 +248,11 @@ router.get('/alerts', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await pool.query('SELECT * FROM medicines WHERE id = $1', [id]);
+    const result = await pool.query(`
+      SELECT * FROM medicines
+      WHERE id = $1
+        AND (is_deleted IS NOT TRUE OR is_deleted IS NULL)
+    `, [id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -347,6 +361,16 @@ router.post('/', async (req, res) => {
     const result = await pool.query(insertQuery, values);
 
     const medicine = result.rows[0];
+
+    // Update supplier ledger balance - add total cost value
+    const totalCostValue = stockQty * finalCostPrice;
+    await pool.query(`
+      UPDATE suppliers
+      SET ledger_balance = COALESCE(ledger_balance, 0) + $1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+    `, [totalCostValue, supplier_id]);
+
     res.status(201).json({
       success: true,
       message: 'Medicine added successfully',
@@ -394,6 +418,31 @@ router.put('/:id', async (req, res) => {
       });
     }
 
+    // If stock_quantity is being updated, calculate ledger impact
+    let shouldUpdateLedger = false;
+    let ledgerDelta = 0;
+    let supplierId = null;
+
+    if (updates.stock_quantity !== undefined) {
+      // Get current medicine data
+      const currentResult = await pool.query('SELECT stock_quantity, cost_price, supplier_id FROM medicines WHERE id = $1', [id]);
+
+      if (currentResult.rows.length > 0) {
+        const current = currentResult.rows[0];
+        const oldStock = parseInt(current.stock_quantity);
+        const newStock = parseInt(updates.stock_quantity);
+        const stockDifference = newStock - oldStock;
+
+        // Only update ledger if stock is ADDED (not removed/sold)
+        if (stockDifference > 0) {
+          shouldUpdateLedger = true;
+          const costPrice = parseFloat(updates.cost_price || current.cost_price);
+          ledgerDelta = stockDifference * costPrice;
+          supplierId = updates.supplier_id || current.supplier_id;
+        }
+      }
+    }
+
     const values = Object.values(updates);
     const setClause = keys.map((key, index) => `${key} = $${index + 1}`).join(', ');
     values.push(id);
@@ -412,6 +461,16 @@ router.put('/:id', async (req, res) => {
         success: false,
         error: 'Medicine not found'
       });
+    }
+
+    // Update supplier ledger if stock was added
+    if (shouldUpdateLedger && supplierId) {
+      await pool.query(`
+        UPDATE suppliers
+        SET ledger_balance = COALESCE(ledger_balance, 0) + $1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [ledgerDelta, supplierId]);
     }
 
     const medicine = result.rows[0];
@@ -438,23 +497,35 @@ router.put('/:id', async (req, res) => {
 
 /**
  * DELETE /api/medicines/:id
- * Delete medicine
+ * Soft delete medicine (sets is_deleted = TRUE)
+ * Prevents foreign key violations with invoice_items
  */
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await pool.query('DELETE FROM medicines WHERE id = $1 RETURNING *', [id]);
+
+    // Soft delete: set is_deleted = TRUE and is_live = FALSE
+    const result = await pool.query(`
+      UPDATE medicines
+      SET is_deleted = TRUE,
+          is_live = FALSE,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+        AND (is_deleted IS NOT TRUE OR is_deleted IS NULL)
+      RETURNING id, brand_name
+    `, [id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        error: 'Medicine not found'
+        error: 'Medicine not found or already deleted'
       });
     }
 
     res.status(200).json({
       success: true,
-      message: 'Medicine deleted successfully'
+      message: 'Medicine deleted successfully',
+      data: result.rows[0]
     });
   } catch (error) {
     console.error('Error deleting medicine:', error);

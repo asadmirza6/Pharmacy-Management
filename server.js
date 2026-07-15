@@ -263,6 +263,16 @@ const supplierRoutes = require('./routes/suppliers');
 app.use('/api/suppliers', requireStockAccess, supplierRoutes);
 console.log('✅ Supplier routes mounted at /api/suppliers (Stock/Admin access)');
 
+// Mount vendor management routes (Admin only)
+const vendorRoutes = require('./routes/vendors');
+app.use('/api/vendors', requireAdmin, vendorRoutes);
+console.log('✅ Vendor routes mounted at /api/vendors (Admin access)');
+
+// Mount inventory management routes (Stock users and Admin)
+const inventoryRoutes = require('./routes/inventory');
+app.use('/api/inventory', requireStockAccess, inventoryRoutes);
+console.log('✅ Inventory routes mounted at /api/inventory (Stock/Admin access)');
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
